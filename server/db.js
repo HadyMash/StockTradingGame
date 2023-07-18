@@ -64,3 +64,18 @@ export async function addMarketDataBulk(items) {
     }
   }
 }
+
+/**
+ * Gets a specific entry from the marketDataContainer
+ * @param {string} symbol - the symbol of the stock
+ * @param {string} id - the id of the stock's entry
+ * @returns {Object} market data entry
+ * @throws {Error} if entry is not found
+ */
+export async function getMarketDataEntry(symbol, id) {
+  const response = await marketDataContainer
+    .item(`${symbol}-${id}`, symbol.toString())
+    .read();
+  console.log(response);
+  return response.resource;
+}
