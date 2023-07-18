@@ -28,3 +28,39 @@ const { container: marketDataContainer } =
 console.log(`${marketDataContainer.id} container ready`);
 
 // TODO: add active games container
+
+/**
+ * Adds a single item to the marketDataContainer
+ */
+export async function addMarketData(item) {
+  const { resource: createdItem } = await marketDataContainer.items.create(
+    item
+  );
+  return createdItem;
+}
+
+/**
+ * Adds an array of items to the marketDataContainer
+ * @param {Array} items
+ * @returns {Array} createdItems
+ */
+export async function addMarketDataBulk(items) {
+  const operationLimit = 100;
+  for (let i = 0; i < items.length; i += operationLimit) {
+    console.log(`starting batch ${i / operationLimit}`);
+    const batch = items.slice(i, i + operationLimit);
+    const operations = [];
+    for (let j = 0; j < batch.length; j++) {
+      operations.push({
+        operationType: 'Create',
+        resourceBody: batch[j],
+      });
+    }
+    var response = await marketDataContainer.items.bulk(operations);
+    for (let i = 0; i < response.length; i++) {
+      if (response[i].statusCode !== 201) {
+        console.log(`error at index ${i}, `, response[i]);
+      }
+    }
+  }
+}
