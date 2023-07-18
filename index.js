@@ -1,10 +1,22 @@
 const express = require("express");
 const app = express();
 
+const stocks = ["apple", "google", "microsoft"];
+const players = [
+  { playerName: "AI", stocksInPossession: stocks[1], playerMoney: 100 },
+];
+
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Hello World!!!");
+app.post("/api/players", (req, res) => {
+  console.log(players);
+  const newPlayer = {
+    playerName: req.body.playerName,
+    stocksInPossession: new Array(),
+    playerMoney: 100,
+  };
+  players.push(newPlayer);
+  res.send(newPlayer);
 });
 
 const port = 3000;
