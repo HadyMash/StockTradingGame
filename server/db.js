@@ -1,4 +1,17 @@
 import { CosmosClient } from '@azure/cosmos';
+// TODO: add more detailed documentation
+
+// TODO: avoid hard coding later
+const stockEntryCount = {
+  AAPL: 5910,
+  AMZN: 5910,
+  MSFT: 5920,
+  GOOG: 4650,
+  TSLA: 3140,
+};
+
+// max number of operations per bulk operation
+const bulkOperationLimit = 100;
 
 // Provide required connection from environment variables
 const key = process.env.COSMOS_KEY;
@@ -45,10 +58,9 @@ export async function addMarketData(item) {
  * @returns {Array} createdItems
  */
 export async function addMarketDataBulk(items) {
-  const operationLimit = 100;
-  for (let i = 0; i < items.length; i += operationLimit) {
-    console.log(`starting batch ${i / operationLimit}`);
-    const batch = items.slice(i, i + operationLimit);
+  for (let i = 0; i < items.length; i += bulkOperationLimit) {
+    console.log(`starting batch ${i / bulkOperationLimit}`);
+    const batch = items.slice(i, i + bulkOperationLimit);
     const operations = [];
     for (let j = 0; j < batch.length; j++) {
       operations.push({
@@ -78,4 +90,89 @@ export async function getMarketDataEntry(symbol, id) {
     .read();
   console.log(response);
   return response.resource;
+}
+
+/**
+ * Get a random first entry for a given symbol
+ * @param {string} symbol - the symbol of the stock
+ * @returns {Object} `statusCode`, `id` for future queries, and market data `entry`
+ */
+// TODO: add retries
+export async function getRandomMarketDataEntry(symbol, maxGameDuration) {
+  if (!symbol || !stockEntryCount[symbol]) {
+    throw new Error('Invalid symbol');
+  }
+  if (!maxGameDuration) {
+    throw new Error('Invalid maxGameDuration');
+  }
+  if (maxGameDuration > stockEntryCount[symbol]) {
+    throw new Error(
+      `Max game duration is too large, maximum game duration for this stock is ${stockEntryCount[symbol]}}`
+    );
+  }
+
+  const randomId = Math.floor(
+    Math.random() * (stockEntryCount[symbol] - maxGameDuration)
+  );
+  var { statusCode, resource } = await marketDataContainer
+    .item(`${symbol}-${randomId}`, symbol.toString())
+    .read();
+
+  return {
+    statusCode: statusCode,
+    id: randomId,
+    entry: resource,
+  };
+}
+
+/**
+ * Gets multiple entries from the marketDataContainer for the given symbol
+ * @param {string} symbol - the symbol of the stock
+ * @param {number} startId - the id of the first entry to get
+ * @param {number} count - the number of entries to get
+ * @returns {Array} market data entries
+ */
+export async function getMarketDataEntries(symbol, startId, count = 1) {
+  if (!symbol || !stockEntryCount[symbol]) {
+    throw new Error('Invalid `symbol`');
+  }
+  if ((!startId && startId != 0) || startId < 0) {
+    throw new Error('Invalid `startId`');
+  }
+  if (!count || count < 1) {
+    throw new Error('Invalid `count`');
+  }
+  if (startId > stockEntryCount[symbol]) {
+    throw new Error(
+      `\`startId\` is too large, maximum number of entries for this stock is ${stockEntryCount[symbol]}}`
+    );
+  }
+  if (startId + count > stockEntryCount[symbol]) {
+    throw new Error(
+      `\`count\` is too large, maximum number of entries for this stock is ${stockEntryCount[symbol]}}`
+    );
+  }
+
+  let data = [];
+  for (let i = 0; i < count; i += bulkOperationLimit) {
+    const operations = [];
+    for (let j = 0; j < Math.min(bulkOperationLimit, count - i); j++) {
+      operations.push({
+        operationType: 'Read',
+        id: `${symbol}-${startId + i + j}`,
+        partitionKey: symbol.toString(),
+      });
+    }
+    var response = await marketDataContainer.items.bulk(operations);
+    for (let i = 0; i < response.length; i++) {
+      if (response[i].statusCode !== 200) {
+        console.log(`error at index ${i}, `, response[i]);
+      }
+      data.push({
+        statusCode: response[i].statusCode,
+        resourceBody: response[i].resourceBody,
+      });
+    }
+  }
+  return data;
 }
