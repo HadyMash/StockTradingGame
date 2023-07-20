@@ -178,3 +178,21 @@ export async function getRandomMarketDataEntry(symbol, maxGameDuration) {
     entry: resource,
   };
 }
+
+/**
+ * Get a consecutive `count` entries for a given symbol starting at a random id
+ * @param {string} symbol - the symbol of the stock
+ * @param {number} maxGameDuration - the maximum duration the game can run for
+ * @param {number} count - the number of entries to get
+ */
+export async function getRandomMarketDataEntries(
+  symbol,
+  maxGameDuration,
+  count = 1
+) {
+  return await getMarketDataEntries(
+    symbol,
+    getRandomSymbolId(symbol, maxGameDuration),
+    count
+  );
+}
