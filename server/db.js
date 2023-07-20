@@ -175,7 +175,7 @@ export async function getRandomMarketDataEntry(symbol, maxGameDuration) {
   return {
     statusCode: statusCode,
     id: randomId,
-    entry: resource,
+    resource: resource,
   };
 }
 
