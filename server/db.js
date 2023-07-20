@@ -9,6 +9,22 @@ const stockEntryCount = {
   GOOG: 4650,
   TSLA: 3140,
 };
+function getRandomSymbolId(symbol, maxGameDuration) {
+  if (!symbol || !stockEntryCount[symbol]) {
+    throw new Error('Invalid symbol');
+  }
+  if (!maxGameDuration) {
+    throw new Error('Invalid maxGameDuration');
+  }
+  if (maxGameDuration > stockEntryCount[symbol]) {
+    throw new Error(
+      `Max game duration is too large, maximum game duration for this stock is ${stockEntryCount[symbol]}}`
+    );
+  }
+  return Math.floor(
+    Math.random() * (stockEntryCount[symbol] - maxGameDuration)
+  );
+}
 
 // max number of operations per bulk operation
 const bulkOperationLimit = 100;
@@ -93,39 +109,6 @@ export async function getMarketDataEntry(symbol, id) {
 }
 
 /**
- * Get a random first entry for a given symbol
- * @param {string} symbol - the symbol of the stock
- * @returns {Object} `statusCode`, `id` for future queries, and market data `entry`
- */
-// TODO: add retries
-export async function getRandomMarketDataEntry(symbol, maxGameDuration) {
-  if (!symbol || !stockEntryCount[symbol]) {
-    throw new Error('Invalid symbol');
-  }
-  if (!maxGameDuration) {
-    throw new Error('Invalid maxGameDuration');
-  }
-  if (maxGameDuration > stockEntryCount[symbol]) {
-    throw new Error(
-      `Max game duration is too large, maximum game duration for this stock is ${stockEntryCount[symbol]}}`
-    );
-  }
-
-  const randomId = Math.floor(
-    Math.random() * (stockEntryCount[symbol] - maxGameDuration)
-  );
-  var { statusCode, resource } = await marketDataContainer
-    .item(`${symbol}-${randomId}`, symbol.toString())
-    .read();
-
-  return {
-    statusCode: statusCode,
-    id: randomId,
-    entry: resource,
-  };
-}
-
-/**
  * Gets multiple entries from the marketDataContainer for the given symbol
  * @param {string} symbol - the symbol of the stock
  * @param {number} startId - the id of the first entry to get
@@ -175,4 +158,23 @@ export async function getMarketDataEntries(symbol, startId, count = 1) {
     }
   }
   return data;
+}
+
+/**
+ * Get a random first entry for a given symbol
+ * @param {string} symbol - the symbol of the stock
+ * @returns {Object} `statusCode`, `id` for future queries, and market data `entry`
+ */
+// TODO: add retries
+export async function getRandomMarketDataEntry(symbol, maxGameDuration) {
+  const randomId = getRandomSymbolId(symbol, maxGameDuration);
+  var { statusCode, resource } = await marketDataContainer
+    .item(`${symbol}-${randomId}`, symbol.toString())
+    .read();
+
+  return {
+    statusCode: statusCode,
+    id: randomId,
+    entry: resource,
+  };
 }
