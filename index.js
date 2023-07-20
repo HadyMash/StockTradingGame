@@ -1,6 +1,9 @@
 const express = require('express');
 const app = express();
 
+//class MarketDatabase {
+// function GetStocks(stockName, startDate, endDate) {}
+
 const stocks = [
   { stockName: 'apple', stockQuantityInMarket: 9, stockPricePerUnit: 3.55 },
   { stockName: 'google', stockQuantityInMarket: 20, stockPricePerUnit: 8.44 },
@@ -10,6 +13,11 @@ const stocks = [
     stockPricePerUnit: 7.42,
   },
 ];
+
+//   return stocks;
+// }
+//}
+
 const players = [
   {
     playerName: 'AI',
@@ -20,18 +28,12 @@ const players = [
 
 app.use(express.json());
 
-//for testing
-//const containerName = 'players';
-//const container = database.container(containerName);
-
 app.post('/api/players', async (req, res) => {
   const newPlayer = {
     playerName: req.body.playerName,
     stocksInPossession: [],
     playerMoney: 100,
   };
-  //for testing the buy action
-  //const { resource: createdPlayer } = await container.items.create(player);
 
   players.push(newPlayer);
   console.log(players);
@@ -50,7 +52,7 @@ app.post('/api/BUY', async (req, res) => {
   } else {
     if (
       stockQuantityPurchased > stockPurchased.stockQuantityInMarket ||
-      stockBought.stockQuantityInMarket <= 0
+      stockPurchased.stockQuantityInMarket <= 0
     ) {
       res.send('No stocks left in market for ur purchase!!');
     } else if (
@@ -58,7 +60,7 @@ app.post('/api/BUY', async (req, res) => {
       stockPurchased.stockPricePerUnit * stockQuantityPurchased
     ) {
       res.send('insufficient funds!!');
-    } else if (isStockAlreadyInPosession(stockBought, player)) {
+    } else if (isStockAlreadyInPosession(stockPurchased, player)) {
       const i = getIndexOfPlayersPosessedStocks(stockPurchased, player);
       player.stocksInPossession[i].quantityInPossession +=
         stockQuantityPurchased;
@@ -73,11 +75,12 @@ app.post('/api/BUY', async (req, res) => {
       });
       stockPurchased.stockQuantityInMarket -= stockQuantityPurchased;
       res.send(stocks);
-      res.send(players);
     }
   }
 });
 
+const player = getPlayer(playerName);
+player.mo;
 function getIndexOfMarketStock(stockName) {
   for (let i = 0; i < stocks.length; i++) {
     if (stockName == stocks[i].stockName) {
@@ -129,48 +132,6 @@ function getStock(stockName) {
   }
   return null;
 }
-
-// Handle buying stocks
-//app.post('/api/buy', async (req, res) => {
-//const { playerName, stockName, quantityInPossession } = req.body;
-//const price = getStockPrice(stockName);
-
-//const { resource: player } = await container.item(playerName).read();
-
-//if (player.playerMoney < price) {
-//  res.status(400).send('Insufficient funds');
-//  return;
-//}
-
-// Update player's balance
-//player.playerMoney -= price;
-
-//const stock = player.stocksInPossession.find(
-//(s) => s.stockName === stockName
-//);
-
-//if (stock) {
-//stock.quantityInPossession += quantityInPossession;
-//} else {
-//  player.stocksInPossession.push({ stockName, price, quantity });
-//}
-
-//const { resource: updatedPlayer } = await container.item(player.id).replace(player);
-//console.log('Stocks bought successfully');
-
-// res.send('Stocks bought successfully');
-//});
-
-//function getStockPrice(stockName) {
-//just for testing
-// return 1;
-//return stockName.stockPricePerUnit;
-
-//return Math.floor(Math.random() * 151) + 50;
-//}
-//app.post("/api/sell", (req, res) => {
-//  const stocksToBeSold;
-//});
 
 const port = 3000;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
