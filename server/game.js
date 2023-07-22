@@ -12,6 +12,12 @@ export class Game {
   }
 }
 
+/**
+ * GameState enum
+ * @property {string} waiting waiting for players
+ * @property {string} active game is active
+ * @property {string} finished game is finished
+ */
 export const GameState = {
   waiting: 'waiting',
   active: 'active',
