@@ -1,5 +1,5 @@
 import { CosmosClient } from '@azure/cosmos';
-import { Game, GameSettings, GameState } from './game.js';
+import { Game } from './game.js';
 import { Player } from './player.js';
 // TODO: add more detailed documentation
 
@@ -72,17 +72,15 @@ console.log('Games container ready');
  * @returns {string} id - a guaranteed unique id
  */
 async function generateUniqueId() {
-  var id;
+  let id;
   let counter = 0;
 
-  // check if the id is unique
-  const { statusCode } = await getGame(id);
   do {
     id = Game.generateId();
     counter++;
   } while (
     // TODO - add check for error code 500
-    statusCode !== 404 &&
+    (await getGame(id)).statusCode !== 404 &&
     counter < 10
   );
   return id;
@@ -131,10 +129,10 @@ export async function addMarketDataBulk(items) {
  * @throws {Error} if entry is not found
  */
 export async function getMarketDataEntry(symbol, id) {
-  const {statusCode, resource} = await marketDataContainer
+  const { statusCode, resource } = await marketDataContainer
     .item(`${symbol}-${id}`, symbol.toString())
     .read();
-  
+
   return {
     statusCode: statusCode,
     resource: resource,
@@ -252,21 +250,31 @@ export async function getGame(id) {
  */
 export async function createNewGame(host, gameSettings, stockStartIds) {
   // generate unique id
-  var id = await generateUniqueId();
-  let game = new Game(id, gameSettings, [host], stockStartIds, 0);
-  try{
-    const { statusCode, resource } = await gamesContainer.items.create(
+  const id = await generateUniqueId();
+  let game = new Game(
+    id,
+    gameSettings,
+    {
+      [host.id]: host.toObject(),
+    },
+    stockStartIds,
+    0
+  );
+  try {
+    var { statusCode, resource } = await gamesContainer.items.create(
       game.toObject()
     );
-    let response = {
-     statusCode: statusCode,
-     resource: resource,
+    return {
+      statusCode: statusCode,
+      resource: resource,
     };
-  return response;
-} catch (e) {
-
-  console.log(e);
-}
+  } catch (e) {
+    console.log(e);
+    return {
+      statusCode: statusCode,
+      error: e.toObject(),
+    };
+  }
 }
 
 /**
@@ -288,12 +296,12 @@ export async function addPlayerToGame(gameId, playerName) {
     do {
       id = Player.generateId();
       counter++;
-    } while (game.players.find((player) => player.id === id));
+    } while (game.players[id] && counter < 10);
   }
 
   const player = new Player(id, playerName, game.settings.startingMoney);
   const operations = [
-    { op: 'add', path: '/players/-', value: player.toObject() },
+    { op: 'add', path: `/players/${player.id}`, value: player.toObject() },
   ];
   const { statusCode, resource } = await gamesContainer
     .item(gameId.toString(), gameId.toString())
@@ -307,15 +315,21 @@ export async function addPlayerToGame(gameId, playerName) {
 export async function buyStock(gameId, playerId, symbol, quantity) {
   quantity = Math.abs(quantity);
   // get game
-  const { statusCode: gameStatusCode, resource: gameResource } = await getGame(gameId);
+  const { statusCode: gameStatusCode, resource: gameResource } = await getGame(
+    gameId
+  );
   if (gameStatusCode !== 200) {
     throw new Error(`Game ${gameId} not found`);
   }
   const game = Game.fromObject(gameResource);
-  let playerMoney = game.players.find((player) => player.id === playerId).money;
+  let playerMoney = game.players[playerId].money;
 
   // get stock price
-  const { statusCode: marketStatusCode, resource: marketResource} = await getMarketDataEntry(symbol, game.stockStartIds[symbol] + game.currentDay);
+  const { statusCode: marketStatusCode, resource: marketResource } =
+    await getMarketDataEntry(
+      symbol,
+      game.stockStartIds[symbol] + game.currentDay
+    );
   if (marketStatusCode !== 200) {
     throw new Error(`Market data for ${symbol} not found`);
   }
@@ -326,22 +340,24 @@ export async function buyStock(gameId, playerId, symbol, quantity) {
     throw new Error(`Player ${playerId} does not have enough money`);
   }
 
-  // TODO: consider storing players in an object instead of an array
-  playerIndex = game.players.findIndex((player) => player.id === playerId);
-  
   const operations = [
     {
-      "op": "incr", "path": `/players/${playerIndex}/money`, "value": stockPrice * -quantity,
+      op: 'incr',
+      path: `/players/${playerId}/money`,
+      value: stockPrice * -quantity,
     },
     {
-      "op": "incr", "path": `/players/${playerIndex}/stocks/${symbol}`, "value": quantity,
-    }
+      op: 'incr',
+      path: `/players/${playerId}/stocks/${symbol}`,
+      value: quantity,
+    },
   ];
 
-  const {statusCode , resource } = await gamesContainer.item(gameId, gameId).patch(operations)
+  const { statusCode, resource } = await gamesContainer
+    .item(gameId, gameId)
+    .patch(operations);
   if (statusCode !== 200) {
-    return {statusCode: statusCode};
+    return { statusCode: statusCode };
   }
-    return {statusCode: statusCode , resource: resource};
-} 
-
+  return { statusCode: statusCode, resource: resource };
+}

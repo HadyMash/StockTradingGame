@@ -4,7 +4,7 @@ export const MAX_PLAYERS = 4;
  * Game class
  * @param {string} id game id (string)
  * @param {GameSettings} settings game settings (GameSettings)
- * @param {Array<Player>} players array of players
+ * @param {Object<string, Player>} players object of players (Object<string, Player>)
  * @param {Object} stockStartIds object of stock start ids
  * @param {number} currentDay current day (number)
  * @param {GameState} state game state (GameState)
