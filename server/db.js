@@ -29,7 +29,7 @@ function getRandomSymbolId(symbol, maxGameDuration) {
 }
 
 // max number of operations per bulk operation
-const bulkOperationLimit = 100;
+const BULK_OPERATION_LIMIT = 100;
 
 // Provide required connection from environment variables
 const key = process.env.COSMOS_KEY;
@@ -104,9 +104,9 @@ export async function addMarketData(item) {
  * @returns {Array} createdItems
  */
 export async function addMarketDataBulk(items) {
-  for (let i = 0; i < items.length; i += bulkOperationLimit) {
-    console.log(`starting batch ${i / bulkOperationLimit}`);
-    const batch = items.slice(i, i + bulkOperationLimit);
+  for (let i = 0; i < items.length; i += BULK_OPERATION_LIMIT) {
+    console.log(`starting batch ${i / BULK_OPERATION_LIMIT}`);
+    const batch = items.slice(i, i + BULK_OPERATION_LIMIT);
     const operations = [];
     for (let j = 0; j < batch.length; j++) {
       operations.push({
@@ -167,9 +167,9 @@ export async function getMarketDataEntries(symbol, startId, count = 1) {
   }
 
   let data = [];
-  for (let i = 0; i < count; i += bulkOperationLimit) {
+  for (let i = 0; i < count; i += BULK_OPERATION_LIMIT) {
     const operations = [];
-    for (let j = 0; j < Math.min(bulkOperationLimit, count - i); j++) {
+    for (let j = 0; j < Math.min(BULK_OPERATION_LIMIT, count - i); j++) {
       operations.push({
         operationType: 'Read',
         id: `${symbol}-${startId + i + j}`,
@@ -264,7 +264,36 @@ export async function createNewGame(host, gameSettings, stockStartIds) {
 
 /**
  * Adds a player to a game
+ * @param {string} gameId - the id of the game (string)
+ * @param {Player} player - the player to add (Player)
  */
-export async function addPlayerToGame(gameId, player) {}
+// TODO: check if game is full
+export async function addPlayerToGame(gameId, playerName) {
+  const gameResponse = await getGame(gameId);
+  if (gameResponse.statusCode !== 200) {
+    throw new Error('Game not found');
+  }
+  const game = Game.fromObject(gameResponse.resource);
 
+  {
+    var id;
+    let counter = 0;
+    do {
+      id = Player.generateId();
+      counter++;
+    } while (game.players.find((player) => player.id === id));
+  }
 
+  const player = new Player(id, playerName, game.settings.startingMoney);
+  const operations = [
+    { op: 'add', path: '/players/-', value: player.toObject() },
+  ];
+  const { statusCode, resource } = await gamesContainer
+    .item(gameId.toString(), gameId.toString())
+    .patch(operations);
+
+  return {
+    statusCode: statusCode,
+    resource: resource,
+  };
+}

@@ -1,3 +1,5 @@
+import {Game} from "./game.js";
+
 /**
  * Player class
  * @param {number} id player id (number)
@@ -11,6 +13,10 @@ export class Player {
     this.name = name;
     this.money = money;
     this.stocks = {};
+  }
+
+  static generateId() {
+    return Game.generateId();
   }
 
   toObject() {
