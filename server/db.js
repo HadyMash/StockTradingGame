@@ -68,6 +68,27 @@ const { container: gamesContainer } =
 console.log('Games container ready');
 
 /**
+ * generates a unique id for a game
+ * @returns {string} id - a guaranteed unique id
+ */
+async function generateUniqueId() {
+  var id;
+  let counter = 0;
+
+  // check if the id is unique
+  const { statusCode } = await getGame(id);
+  do {
+    id = Game.generateId();
+    counter++;
+  } while (
+    // TODO - add check for error code 500
+    statusCode !== 404 &&
+    counter < 10
+  );
+  return id;
+}
+
+/**
  * Adds a single item to the marketDataContainer
  */
 export async function addMarketData(item) {
@@ -246,23 +267,4 @@ export async function createNewGame(host, gameSettings, stockStartIds) {
  */
 export async function addPlayerToGame(gameId, player) {}
 
-/**
- * generates a unique id for a game
- * @returns {string} id - a garanteed unique id
- */
-async function generateUniqueId() {
-  var id;
-  let counter = 0;
 
-  // check if the id is unique
-  const { statusCode } = await getGame(id);
-  do {
-    id = Game.generateId();
-    counter++;
-  } while (
-    // TODO - add check for error code 500
-    statusCode !== 404 &&
-    counter < 10
-  );
-  return id;
-}
