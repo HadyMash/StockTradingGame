@@ -10,6 +10,25 @@ export class Game {
     this.state = state;
     this.players = players;
   }
+
+  toObject() {
+    return {
+      id: this.id,
+      state: this.state,
+      players: this.players,
+    };
+  }
+  fromObject(obj) {
+    return Game(obj.id, obj.state, obj.players);
+  }
+
+  toJSON() {
+    return JSON.stringify(this.toObject());
+  }
+
+  fromJSON(json) {
+    this.fromObject(JSON.parse(json));
+  }
 }
 
 /**

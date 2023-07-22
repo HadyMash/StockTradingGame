@@ -12,4 +12,28 @@ export class Player {
     this.money = money;
     this.stocks = {};
   }
+
+  toObject() {
+    return {
+      id: this.id,
+      name: this.name,
+      money: this.money,
+      stocks: this.stocks,
+    };
+  }
+
+  fromObject(obj) {
+    this.id = obj.id;
+    this.name = obj.name;
+    this.money = obj.money;
+    this.stocks = obj.stocks;
+  }
+
+  toJSON() {
+    return JSON.stringify(this.toObject());
+  }
+
+  fromJSON(json) {
+    this.fromObject(JSON.parse(json));
+  }
 }
