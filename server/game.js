@@ -5,9 +5,8 @@
  * @param {Array<Player>} players array of players (<Player>[])
  */
 export class Game {
-  constructor(id, state, players) {
+  constructor(id, players, state = GameState.waiting) {
     this.id = id;
-    this.state = state;
     this.players = players;
   }
 
