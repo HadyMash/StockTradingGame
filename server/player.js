@@ -22,18 +22,15 @@ export class Player {
     };
   }
 
-  fromObject(obj) {
-    this.id = obj.id;
-    this.name = obj.name;
-    this.money = obj.money;
-    this.stocks = obj.stocks;
+  static fromObject(obj) {
+    return new Player(obj.id, obj.name, obj.money, obj.stocks);
   }
 
   toJSON() {
     return JSON.stringify(this.toObject());
   }
 
-  fromJSON(json) {
-    this.fromObject(JSON.parse(json));
+  static fromJSON(json) {
+    return this.fromObject(JSON.parse(json));
   }
 }
