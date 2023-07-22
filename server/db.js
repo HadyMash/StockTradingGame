@@ -9,6 +9,7 @@ const stockEntryCount = {
   GOOG: 4650,
   TSLA: 3140,
 };
+
 function getRandomSymbolId(symbol, maxGameDuration) {
   if (!symbol || !stockEntryCount[symbol]) {
     throw new Error('Invalid symbol');
