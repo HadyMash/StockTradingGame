@@ -2,7 +2,7 @@
  * Game class
  * @param {string} id game id (string)
  * @param {GameState} state game state (GameState)
- * @param {Array<Player>} players array of players (<Player>[])
+ * @param {Array<Player>} players array of players
  */
 export class Game {
   constructor(id, players, state = GameState.waiting) {

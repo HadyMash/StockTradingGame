@@ -1,4 +1,6 @@
 import { CosmosClient } from '@azure/cosmos';
+import { Game, GameState } from './game.js';
+import { Player } from './player.js';
 // TODO: add more detailed documentation
 
 // TODO: avoid hard coding later
@@ -46,7 +48,7 @@ const { database } = await cosmosClient.databases.createIfNotExists({
 });
 console.log(`${database.id} database ready`);
 
-// Create containers if they don't exist
+// Create containers if they don't exist`Ω
 const { container: marketDataContainer } =
   await database.containers.createIfNotExists({
     id: 'MarketData',
@@ -56,7 +58,14 @@ const { container: marketDataContainer } =
   });
 console.log(`${marketDataContainer.id} container ready`);
 
-// TODO: add active games container
+const { container: gamesContainer } =
+  await database.containers.createIfNotExists({
+    id: 'Games',
+    partitionKey: {
+      paths: ['/id'],
+    },
+  });
+console.log('Games container ready');
 
 /**
  * Adds a single item to the marketDataContainer
@@ -195,4 +204,25 @@ export async function getRandomMarketDataEntries(
     getRandomSymbolId(symbol, maxGameDuration),
     count
   );
+}
+
+/**
+ * Creates a new game
+ *
+ * @param {Player} host (Player)
+ * @returns {Game} the created game (Game)
+ */
+export async function createNewGame(host) {
+  // TODO: generate random id
+  let id = 'ABCD';
+  // TODO: check if id is unique
+  let game = new Game(id, [host]);
+  const { statusCode, resource } = await gamesContainer.items.create(
+    game.toObject()
+  );
+  let response = {
+    statusCode: statusCode,
+    resource: resource,
+  };
+  console.log(response);
 }
