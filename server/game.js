@@ -1,3 +1,5 @@
+// TODO: add max players to game settings
+export const MAX_PLAYERS = 4;
 /**
  * Game class
  * @param {string} id game id (string)
@@ -30,8 +32,8 @@ export class Game {
     let id = '';
     for (let i = 0; i < 5; i++) {
       id += letters[Math.floor(Math.random() * letters.length)];
-      return id;
     }
+    return id;
   }
 
   toObject() {
@@ -46,7 +48,7 @@ export class Game {
   }
 
   static fromObject(obj) {
-    return Game(
+    return new Game(
       obj.id,
       obj.settings,
       obj.players,
@@ -90,7 +92,7 @@ export class GameSettings {
   }
 
   static fromObject(obj) {
-    return GameSettings(
+    return new GameSettings(
       obj.maxGameTurns,
       obj.roundDurationSeconds,
       obj.startingMoney,
