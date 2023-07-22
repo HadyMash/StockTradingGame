@@ -13,5 +13,5 @@
   },
   "prettier.singleQuote": true,
   "prettier.tabWidth": 2,
-  "cSpell.words": ["TSLA"]
+  "cSpell.words": ["stocktradinggame", "TSLA"]
 }
