@@ -1,5 +1,5 @@
 import { CosmosClient } from '@azure/cosmos';
-import { Game, GameState } from './game.js';
+import { Game, GameSettings, GameState } from './game.js';
 import { Player } from './player.js';
 // TODO: add more detailed documentation
 
@@ -207,16 +207,30 @@ export async function getRandomMarketDataEntries(
 }
 
 /**
+ * Gets a game from the Database
+ * @param {string} id - the id of the game
+ */
+export async function getGame(id) {
+  const { statusCode, resource } = await gamesContainer
+    .item(id.toString(), id.toString())
+    .read();
+  return {
+    statusCode: statusCode,
+    resource: resource,
+  };
+}
+
+/**
  * Creates a new game
  *
  * @param {Player} host (Player)
  * @returns {Game} the created game (Game)
  */
-export async function createNewGame(host) {
-  // TODO: generate random id
-  let id = 'ABCD';
-  // TODO: check if id is unique
-  let game = new Game(id, [host]);
+export async function createNewGame(host, gameSettings, stockStartIds) {
+  // generate unique id
+  var id = await generateUniqueId();
+
+  let game = new Game(id, gameSettings, [host], stockStartIds, 0);
   const { statusCode, resource } = await gamesContainer.items.create(
     game.toObject()
   );
@@ -225,4 +239,30 @@ export async function createNewGame(host) {
     resource: resource,
   };
   console.log(response);
+}
+
+/**
+ * Adds a player to a game
+ */
+export async function addPlayerToGame(gameId, player) {}
+
+/**
+ * generates a unique id for a game
+ * @returns {string} id - a garanteed unique id
+ */
+async function generateUniqueId() {
+  var id;
+  let counter = 0;
+
+  // check if the id is unique
+  const { statusCode } = await getGame(id);
+  do {
+    id = Game.generateId();
+    counter++;
+  } while (
+    // TODO - add check for error code 500
+    statusCode !== 404 &&
+    counter < 10
+  );
+  return id;
 }
