@@ -274,7 +274,8 @@ export async function createNewGame(hostName, gameSettings, stockStartIds) {
       [player.id]: player.toObject(),
     },
     stockStartIds,
-    0
+    0,
+    player.id
   );
   try {
     var { statusCode, resource } = await gamesContainer.items.create(
@@ -282,13 +283,13 @@ export async function createNewGame(hostName, gameSettings, stockStartIds) {
     );
     return {
       statusCode: statusCode,
+      player: player.toObject(),
       resource: resource,
     };
   } catch (e) {
     console.log(e);
     return {
       statusCode: statusCode,
-      player: player.toObject(),
       error: e.toObject(),
     };
   }
@@ -323,15 +324,62 @@ export async function addPlayerToGame(gameId, playerName) {
   const operations = [
     { op: 'add', path: `/players/${player.id}`, value: player.toObject() },
   ];
+  try {
+    var { statusCode, resource } = await gamesContainer
+      .item(gameId.toString(), gameId.toString())
+      .patch(operations);
+
+    return {
+      statusCode: statusCode,
+      player: player.toObject(),
+      resource: resource,
+    };
+  } catch (error) {
+    return {
+      statusCode: statusCode,
+      error: error.toObject(),
+    };
+  }
+}
+// TODO: remove player from game
+
+/**
+ * Updates the game's state
+ * @param {string} gameId game id (string)
+ * @param {GameState} state game state (GameState)
+ * @returns {Object} statusCode and resource
+ */
+async function setGameState(gameId, state) {
+  const operations = [{ op: 'replace', path: '/state', value: state }];
   const { statusCode, resource } = await gamesContainer
     .item(gameId.toString(), gameId.toString())
     .patch(operations);
-
   return {
     statusCode: statusCode,
-    player: player.toObject(),
     resource: resource,
   };
+}
+
+/**
+ * Starts a game
+ * @param {string} gameId - the id of the game (string)
+ * @param {string} playerId - the id of the player starting the game (string)
+ */
+export async function startGame(gameId, playerId) {
+  const gameResponse = await getGame(gameId);
+  if (gameResponse.statusCode !== 200) {
+    throw new Error('Game not found');
+  }
+  const game = Game.fromObject(gameResponse.resource);
+  if (game.hostId !== playerId) {
+    throw new Error('Player is not the host');
+  }
+
+  return await setGameState(gameId, GameState.active);
+}
+
+export async function endGame(gameId) {
+  return await setGameState(gameId, GameState.ended);
 }
 
 export async function buyStock(gameId, playerId, symbol, quantity) {

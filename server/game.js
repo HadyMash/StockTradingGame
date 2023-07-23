@@ -3,6 +3,7 @@ export const MAX_PLAYERS = 4;
 /**
  * Game class
  * @param {string} id game id (string)
+ * @param {string} hostId host id (string)
  * @param {GameSettings} settings game settings (GameSettings)
  * @param {Object<string, Player>} players object of players (Object<string, Player>)
  * @param {Object} stockStartIds object of stock start ids
@@ -16,6 +17,7 @@ export class Game {
     players,
     stockStartIds,
     currentDay,
+    hostId,
     state = GameState.waiting
   ) {
     this.id = id;
@@ -24,6 +26,7 @@ export class Game {
     this.stockStartIds = stockStartIds;
     this.currentDay = currentDay;
     this.players = players;
+    this.hostId = hostId;
   }
 
   static generateId() {
@@ -44,6 +47,7 @@ export class Game {
       players: this.players,
       stockStartIds: this.stockStartIds,
       currentDay: this.currentDay,
+      hostId: this.hostId,
     };
   }
 
@@ -54,6 +58,7 @@ export class Game {
       obj.players,
       obj.stockStartIds,
       obj.currentDay,
+      obj.hostId,
       obj.state
     );
   }
