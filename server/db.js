@@ -259,7 +259,7 @@ export async function createNewGame(hostName, gameSettings, stockStartIds) {
   const gameId = await generateUniqueId();
   let game = new Game(
     gameId,
-    gameSettings,
+    gameSettings.toObject(),
     {
       [player.id]: player.toObject(),
     },
