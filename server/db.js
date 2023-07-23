@@ -1,7 +1,6 @@
 import { CosmosClient } from '@azure/cosmos';
 import { Game, GameState } from './game.js';
 import { Player } from './player.js';
-// TODO: add more detailed documentation
 
 // TODO: avoid hard coding later
 const stockEntryCount = {
@@ -300,7 +299,6 @@ export async function createNewGame(hostName, gameSettings, stockStartIds) {
  * @param {string} gameId - the id of the game (string)
  * @param {Player} player - the player to add (Player)
  */
-// TODO: check if game is full
 export async function addPlayerToGame(gameId, playerName) {
   const gameResponse = await getGame(gameId);
   if (gameResponse.statusCode !== 200) {
@@ -442,7 +440,7 @@ export async function sellStock(gameId, playerId, symbol, quantity) {
 }
 
 /**
- *
+ * get's info used in the buy/sell stocks functions
  * @param {string} gameId game id
  * @param {string} playerId player id
  * @param {string} symbol symbol of the stock

@@ -1,5 +1,3 @@
-// TODO: add max players to game settings
-export const MAX_PLAYERS = 4;
 /**
  * Game class
  * @param {string} id game id (string)
@@ -30,7 +28,6 @@ export class Game {
   }
 
   static generateId() {
-    // TODO: generate random id
     let letters = 'abcdefghijklmnopqrstuvwxyz';
     let id = '';
     for (let i = 0; i < 5; i++) {
