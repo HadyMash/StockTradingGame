@@ -1,12 +1,55 @@
-// export COSMOS_ENDPOINT="https://delta.documents.azure.com:443/"
-// export COSMOS_KEY="ogZtTqNUKrGr9jA89Fr2iTaveJzbMYJl8zpaq0bmx0ivFryPsOvl4zBJcXVD8CH91NeA4CPnSjRnACDbiZBJAw=="
-
 import express from 'express';
 const app = express();
+//const server = require('http').Server(app);
+//const socketIo = require('socket.io');
+//const io = socketIo(server);
+//import * as db from './db';
+import * as db from './db.js';
+
+app.get('/marketdata', async (req, res) => {
+  try {
+    const symbol = req.params.symbol;
+    const startId = parseInt(req.params.startId);
+    const count = parseInt(req.params.count);
+    const data = await db.getMarketDataEntries(symbol, startId, count);
+    res.status(200).json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Internal Server Error');
+  }
+  console.log("succeeded");
+});
+
+app.get('/marketdata/random', async (req, res) => {
+  try {
+    const symbol = req.params.symbol;
+    const maxGameDuration = parseInt(req.params.maxGameDuration);
+    const count = parseInt(req.params.count);
+    const data = await db.getRandomMarketDataEntries(symbol, maxGameDuration, count);
+    res.status(200).json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+app.post('/addmarketdata', async (req, res) => {
+  try {
+    const data = req.body;
+    const createdItem = await db.addMarketData(data);
+    res.status(201).json(createdItem);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+
+
 
 //class MarketDatabase {
 // function GetStocks(stockName, startDate, endDate) {}
-
+/*
 const stocks = [
   { stockName: 'apple', stockQuantityInMarket: 9, stockPricePerUnit: 3.55 },
   { stockName: 'google', stockQuantityInMarket: 20, stockPricePerUnit: 8.44 },
@@ -133,6 +176,6 @@ function getStock(stockName) {
   }
   return null;
 }
-
+*/
 const port = 3000;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
