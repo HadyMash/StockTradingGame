@@ -248,14 +248,20 @@ export async function getGame(id) {
  * @param {Player} host (Player)
  * @returns {Game} the created game (Game)
  */
-export async function createNewGame(host, gameSettings, stockStartIds) {
+export async function createNewGame(hostName, gameSettings, stockStartIds) {
+  // create player
+  const player = new Player(
+    Player.generateId(),
+    hostName,
+    gameSettings.startingMoney
+  );
   // generate unique id
-  const id = await generateUniqueId();
+  const gameId = await generateUniqueId();
   let game = new Game(
-    id,
+    gameId,
     gameSettings,
     {
-      [host.id]: host.toObject(),
+      [player.id]: player.toObject(),
     },
     stockStartIds,
     0
