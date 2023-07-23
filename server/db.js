@@ -1,5 +1,6 @@
 import { CosmosClient } from '@azure/cosmos';
-// TODO: add more detailed documentation
+import { Game, GameState } from './game.js';
+import { Player } from './player.js';
 
 // TODO: avoid hard coding later
 const stockEntryCount = {
@@ -9,8 +10,14 @@ const stockEntryCount = {
   GOOG: 4650,
   TSLA: 3140,
 };
-
-function getRandomSymbolId(symbol, maxGameDuration) {
+/**
+ *
+ * @param {string} symbol - the symbol of the stock
+ * @param {number} maxGameDuration maximum number of turns
+ * @param {number} buffer - a buffer in case you need to show buffer days before the game starts
+ * @returns
+ */
+function getRandomSymbolId(symbol, maxGameDuration, buffer = 0) {
   if (!symbol || !stockEntryCount[symbol]) {
     throw new Error('Invalid symbol');
   }
@@ -23,12 +30,15 @@ function getRandomSymbolId(symbol, maxGameDuration) {
     );
   }
   return Math.floor(
-    Math.random() * (stockEntryCount[symbol] - maxGameDuration)
+    Math.random() *
+      (stockEntryCount[symbol] -
+        Math.floor(maxGameDuration) -
+        Math.floor(buffer))
   );
 }
 
 // max number of operations per bulk operation
-const bulkOperationLimit = 100;
+const BULK_OPERATION_LIMIT = 100;
 
 // Provide required connection from environment variables
 const key = process.env.COSMOS_KEY;
@@ -47,7 +57,7 @@ const { database } = await cosmosClient.databases.createIfNotExists({
 });
 console.log(`${database.id} database ready`);
 
-// Create containers if they don't exist
+// Create containers if they don't exist`Ω
 const { container: marketDataContainer } =
   await database.containers.createIfNotExists({
     id: 'MarketData',
@@ -57,7 +67,33 @@ const { container: marketDataContainer } =
   });
 console.log(`${marketDataContainer.id} container ready`);
 
-// TODO: add active games container
+const { container: gamesContainer } =
+  await database.containers.createIfNotExists({
+    id: 'Games',
+    partitionKey: {
+      paths: ['/id'],
+    },
+  });
+console.log('Games container ready');
+
+/**
+ * generates a unique id for a game
+ * @returns {string} id - a guaranteed unique id
+ */
+async function generateUniqueId() {
+  let id;
+  let counter = 0;
+
+  do {
+    id = Game.generateId();
+    counter++;
+  } while (
+    // TODO - add check for error code 500
+    (await getGame(id)).statusCode !== 404 &&
+    counter < 10
+  );
+  return id;
+}
 
 /**
  * Adds a single item to the marketDataContainer
@@ -75,9 +111,9 @@ export async function addMarketData(item) {
  * @returns {Array} createdItems
  */
 export async function addMarketDataBulk(items) {
-  for (let i = 0; i < items.length; i += bulkOperationLimit) {
-    console.log(`starting batch ${i / bulkOperationLimit}`);
-    const batch = items.slice(i, i + bulkOperationLimit);
+  for (let i = 0; i < items.length; i += BULK_OPERATION_LIMIT) {
+    console.log(`starting batch ${i / BULK_OPERATION_LIMIT}`);
+    const batch = items.slice(i, i + BULK_OPERATION_LIMIT);
     const operations = [];
     for (let j = 0; j < batch.length; j++) {
       operations.push({
@@ -102,11 +138,14 @@ export async function addMarketDataBulk(items) {
  * @throws {Error} if entry is not found
  */
 export async function getMarketDataEntry(symbol, id) {
-  const response = await marketDataContainer
+  const { statusCode, resource } = await marketDataContainer
     .item(`${symbol}-${id}`, symbol.toString())
     .read();
-  console.log(response);
-  return response.resource;
+
+  return {
+    statusCode: statusCode,
+    resource: resource,
+  };
 }
 
 /**
@@ -138,9 +177,9 @@ export async function getMarketDataEntries(symbol, startId, count = 1) {
   }
 
   let data = [];
-  for (let i = 0; i < count; i += bulkOperationLimit) {
+  for (let i = 0; i < count; i += BULK_OPERATION_LIMIT) {
     const operations = [];
-    for (let j = 0; j < Math.min(bulkOperationLimit, count - i); j++) {
+    for (let j = 0; j < Math.min(BULK_OPERATION_LIMIT, count - i); j++) {
       operations.push({
         operationType: 'Read',
         id: `${symbol}-${startId + i + j}`,
@@ -196,4 +235,300 @@ export async function getRandomMarketDataEntries(
     getRandomSymbolId(symbol, maxGameDuration),
     count
   );
+}
+
+/**
+ * Gets a game from the Database
+ * @param {string} id - the id of the game
+ */
+export async function getGame(id) {
+  const { statusCode, resource } = await gamesContainer
+    .item(id.toString(), id.toString())
+    .read();
+  return {
+    statusCode: statusCode,
+    resource: resource,
+  };
+}
+
+/**
+ * Creates a new game
+ *
+ * @param {Player} host (Player)
+ * @returns {Game} the created game (Game)
+ */
+export async function createNewGame(hostName, gameSettings, stockStartIds) {
+  // create player
+  const player = new Player(
+    Player.generateId(),
+    hostName,
+    gameSettings.startingMoney
+  );
+  // generate unique id
+  const gameId = await generateUniqueId();
+  let game = new Game(
+    gameId,
+    gameSettings.toObject(),
+    {
+      [player.id]: player.toObject(),
+    },
+    stockStartIds,
+    0,
+    player.id
+  );
+  try {
+    var { statusCode, resource } = await gamesContainer.items.create(
+      game.toObject()
+    );
+    return {
+      statusCode: statusCode,
+      player: player.toObject(),
+      resource: resource,
+    };
+  } catch (e) {
+    console.log(e);
+    return {
+      statusCode: statusCode,
+      error: e.toObject(),
+    };
+  }
+}
+
+/**
+ * Adds a player to a game
+ * @param {string} gameId - the id of the game (string)
+ * @param {Player} player - the player to add (Player)
+ */
+export async function addPlayerToGame(gameId, playerName) {
+  const gameResponse = await getGame(gameId);
+  if (gameResponse.statusCode !== 200) {
+    throw new Error('Game not found');
+  }
+  const game = Game.fromObject(gameResponse.resource);
+  if (Object.keys(game.players).length >= game.settings.maxPlayers) {
+    throw new Error('Game is full');
+  }
+
+  {
+    var id;
+    let counter = 0;
+    do {
+      id = Player.generateId();
+      counter++;
+    } while (game.players[id] && counter < 10);
+  }
+
+  const player = new Player(id, playerName, game.settings.startingMoney);
+  const operations = [
+    { op: 'add', path: `/players/${player.id}`, value: player.toObject() },
+  ];
+  try {
+    var { statusCode, resource } = await gamesContainer
+      .item(gameId.toString(), gameId.toString())
+      .patch(operations);
+
+    return {
+      statusCode: statusCode,
+      player: player.toObject(),
+      resource: resource,
+    };
+  } catch (error) {
+    return {
+      statusCode: statusCode,
+      error: error.toObject(),
+    };
+  }
+}
+// TODO: remove player from game
+/**
+ * Removes a player from a game
+ * @param {string} gameId - the id of the game (string)
+ * @param {string} playerId - the id of the player to remove (string)
+ * @param {string} requestId - the id of the person requesting the removal (string)
+ * @returns {Object} statusCode and resource
+ */
+export async function removePlayerFromGame(gameId, playerId, requestId) {
+  const gameResponse = await getGame(gameId);
+  if (gameResponse.statusCode !== 200) {
+    throw new Error('Game not found');
+  }
+  const game = Game.fromObject(gameResponse.resource);
+  if (game.hostId !== requestId && playerId !== requestId) {
+    throw new Error('Player is not the host or the player to be removed');
+  }
+  if (!game.players[playerId]) {
+    throw new Error('Player not found');
+  }
+  const operations = [{ op: 'remove', path: `/players/${playerId}` }];
+  try {
+    var { statusCode, resource } = await gamesContainer
+      .item(gameId.toString(), gameId.toString())
+      .patch(operations);
+
+    return {
+      statusCode: statusCode,
+      resource: resource,
+    };
+  } catch (error) {
+    return {
+      statusCode: statusCode,
+      error: error.toObject(),
+    };
+  }
+}
+
+/**
+ * Updates the game's state
+ * @param {string} gameId game id (string)
+ * @param {GameState} state game state (GameState)
+ * @returns {Object} statusCode and resource
+ */
+async function setGameState(gameId, state) {
+  const operations = [{ op: 'replace', path: '/state', value: state }];
+  const { statusCode, resource } = await gamesContainer
+    .item(gameId.toString(), gameId.toString())
+    .patch(operations);
+  return {
+    statusCode: statusCode,
+    resource: resource,
+  };
+}
+
+/**
+ * Set's the game's state to GameState.active
+ * @param {string} gameId - the id of the game (string)
+ * @param {string} playerId - the id of the player starting the game (string)
+ */
+export async function startGame(gameId, playerId) {
+  const gameResponse = await getGame(gameId);
+  if (gameResponse.statusCode !== 200) {
+    throw new Error('Game not found');
+  }
+  const game = Game.fromObject(gameResponse.resource);
+  if (game.hostId !== playerId) {
+    throw new Error('Player is not the host');
+  }
+  if (Object.keys(game.players).length < 2) {
+    throw new Error('Not enough players');
+  }
+
+  return await setGameState(gameId, GameState.active);
+}
+
+/**
+ * Sets the game's state to GameState.finished
+ */
+export async function endGame(gameId) {
+  return await setGameState(gameId, GameState.ended);
+}
+
+/**
+ * updates the player money and stock values based on the desired transaction (buy) in the db
+ * @param {string} gameId
+ * @param {string} playerId
+ * @param {string} symbol
+ * @param {int} quantity
+ * @returns player object with updated money and stocks
+ */
+export async function buyStock(gameId, playerId, symbol, quantity) {
+  quantity = Math.abs(quantity);
+  const {
+    stockPrice,
+    playerMoney,
+    operations: opp,
+  } = await getTransactionInfo(gameId, playerId, symbol, quantity);
+  if (playerMoney < stockPrice * quantity) {
+    throw new Error(`Player ${playerId} does not have enough money`);
+  }
+
+  const operations = opp;
+
+  const { statusCode, resource } = await gamesContainer
+    .item(gameId, gameId)
+    .patch(operations);
+  if (statusCode !== 200) {
+    return { statusCode: statusCode };
+  }
+  return { statusCode: statusCode, resource: resource };
+}
+
+/**
+ * updates the player money and stock values based on the desired transaction (sell) in the db
+ * @param {string} gameId
+ * @param {string} playerId
+ * @param {string} symbol
+ * @param {int} quantity
+ * @returns player object with updated money and stocks
+ */
+export async function sellStock(gameId, playerId, symbol, quantity) {
+  quantity = Math.abs(quantity);
+  const { numOfStocks: numOfStocks, operations: opp } =
+    await getTransactionInfo(gameId, playerId, symbol, -quantity);
+  // check if player has enough stocks
+  if (numOfStocks < quantity) {
+    throw new Error(`Player ${playerId} does not have enough stocks`);
+  }
+  const operations = opp;
+  const { statusCode, resource } = await gamesContainer
+    .item(gameId, gameId)
+    .patch(operations);
+  if (statusCode !== 200) {
+    return { statusCode: statusCode };
+  }
+  return { statusCode: statusCode, resource: resource };
+}
+
+/**
+ * get's info used in the buy/sell stocks functions
+ * @param {string} gameId game id
+ * @param {string} playerId player id
+ * @param {string} symbol symbol of the stock
+ * @param {number} quantity amount to trade
+ * @returns
+ */
+async function getTransactionInfo(gameId, playerId, symbol, quantity) {
+  const { statusCode: gameStatusCode, resource: gameResource } = await getGame(
+    gameId
+  );
+  if (gameStatusCode !== 200) {
+    throw new Error(`Game ${gameId} not found`);
+  }
+  const game = Game.fromObject(gameResource);
+
+  if (game.state !== GameState.active) {
+    throw new Error(`Game ${gameId} is not active`);
+  }
+
+  let playerMoney = game.players[playerId].money;
+
+  // get stock price
+  const { statusCode: marketStatusCode, resource: marketResource } =
+    await getMarketDataEntry(
+      symbol,
+      game.stockStartIds[symbol] + game.currentDay
+    );
+  if (marketStatusCode !== 200) {
+    throw new Error(`Market data for ${symbol} not found`);
+  }
+  const stockPrice = marketResource.price;
+  const numOfStocks = game.players[playerId].stocks[symbol];
+  const operations = [
+    {
+      op: 'incr',
+      path: `/players/${playerId}/money`,
+      value: stockPrice * -quantity,
+    },
+    {
+      op: 'incr',
+      path: `/players/${playerId}/stocks/${symbol}`,
+      value: quantity,
+    },
+  ];
+
+  return {
+    stockPrice: stockPrice,
+    numOfStocks: numOfStocks,
+    playerMoney: playerMoney,
+    operations: operations,
+  };
 }
