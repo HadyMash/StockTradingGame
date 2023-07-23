@@ -340,6 +340,42 @@ export async function addPlayerToGame(gameId, playerName) {
   }
 }
 // TODO: remove player from game
+/**
+ * Removes a player from a game
+ * @param {string} gameId - the id of the game (string)
+ * @param {string} playerId - the id of the player to remove (string)
+ * @param {string} requestId - the id of the person requesting the removal (string)
+ * @returns {Object} statusCode and resource
+ */
+export async function removePlayerFromGame(gameId, playerId, requestId) {
+  const gameResponse = await getGame(gameId);
+  if (gameResponse.statusCode !== 200) {
+    throw new Error('Game not found');
+  }
+  const game = Game.fromObject(gameResponse.resource);
+  if (game.hostId !== requestId && playerId !== requestId) {
+    throw new Error('Player is not the host or the player to be removed');
+  }
+  if (!game.players[playerId]) {
+    throw new Error('Player not found');
+  }
+  const operations = [{ op: 'remove', path: `/players/${playerId}` }];
+  try {
+    var { statusCode, resource } = await gamesContainer
+      .item(gameId.toString(), gameId.toString())
+      .patch(operations);
+
+    return {
+      statusCode: statusCode,
+      resource: resource,
+    };
+  } catch (error) {
+    return {
+      statusCode: statusCode,
+      error: error.toObject(),
+    };
+  }
+}
 
 /**
  * Updates the game's state
