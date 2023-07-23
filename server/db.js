@@ -1,5 +1,5 @@
 import { CosmosClient } from '@azure/cosmos';
-import { Game } from './game.js';
+import { Game, GameState } from './game.js';
 import { Player } from './player.js';
 // TODO: add more detailed documentation
 
@@ -11,7 +11,14 @@ const stockEntryCount = {
   GOOG: 4650,
   TSLA: 3140,
 };
-function getRandomSymbolId(symbol, maxGameDuration) {
+/**
+ *
+ * @param {string} symbol - the symbol of the stock
+ * @param {number} maxGameDuration maximum number of turns
+ * @param {number} buffer - a buffer in case you need to show buffer days before the game starts
+ * @returns
+ */
+function getRandomSymbolId(symbol, maxGameDuration, buffer = 0) {
   if (!symbol || !stockEntryCount[symbol]) {
     throw new Error('Invalid symbol');
   }
@@ -24,7 +31,10 @@ function getRandomSymbolId(symbol, maxGameDuration) {
     );
   }
   return Math.floor(
-    Math.random() * (stockEntryCount[symbol] - maxGameDuration)
+    Math.random() *
+      (stockEntryCount[symbol] -
+        Math.floor(maxGameDuration) -
+        Math.floor(buffer))
   );
 }
 
@@ -278,6 +288,7 @@ export async function createNewGame(hostName, gameSettings, stockStartIds) {
     console.log(e);
     return {
       statusCode: statusCode,
+      player: player.toObject(),
       error: e.toObject(),
     };
   }
@@ -295,6 +306,9 @@ export async function addPlayerToGame(gameId, playerName) {
     throw new Error('Game not found');
   }
   const game = Game.fromObject(gameResponse.resource);
+  if (Object.keys(game.players).length >= game.settings.maxPlayers) {
+    throw new Error('Game is full');
+  }
 
   {
     var id;
@@ -315,9 +329,11 @@ export async function addPlayerToGame(gameId, playerName) {
 
   return {
     statusCode: statusCode,
+    player: player.toObject(),
     resource: resource,
   };
 }
+
 export async function buyStock(gameId, playerId, symbol, quantity) {
   quantity = Math.abs(quantity);
   // get game
@@ -328,6 +344,11 @@ export async function buyStock(gameId, playerId, symbol, quantity) {
     throw new Error(`Game ${gameId} not found`);
   }
   const game = Game.fromObject(gameResource);
+
+  if (game.state !== GameState.active) {
+    throw new Error(`Game ${gameId} is not active`);
+  }
+
   let playerMoney = game.players[playerId].money;
 
   // get stock price
