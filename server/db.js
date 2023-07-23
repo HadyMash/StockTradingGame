@@ -408,6 +408,9 @@ export async function startGame(gameId, playerId) {
   if (game.hostId !== playerId) {
     throw new Error('Player is not the host');
   }
+  if (Object.keys(game.players).length < 2) {
+    throw new Error('Not enough players');
+  }
 
   return await setGameState(gameId, GameState.active);
 }
