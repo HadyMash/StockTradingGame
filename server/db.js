@@ -322,44 +322,16 @@ export async function addPlayerToGame(gameId, playerName) {
  */
 export async function buyStock(gameId, playerId, symbol, quantity) {
   quantity = Math.abs(quantity);
-  // get game
-  const { statusCode: gameStatusCode, resource: gameResource } = await getGame(
-    gameId
-  );
-  if (gameStatusCode !== 200) {
-    throw new Error(`Game ${gameId} not found`);
-  }
-  const game = Game.fromObject(gameResource);
-  let playerMoney = game.players[playerId].money;
-
-  // get stock price
-  const { statusCode: marketStatusCode, resource: marketResource } =
-    await getMarketDataEntry(
-      symbol,
-      game.stockStartIds[symbol] + game.currentDay
-    );
-  if (marketStatusCode !== 200) {
-    throw new Error(`Market data for ${symbol} not found`);
-  }
-
-  // check if player has enough money
-  let stockPrice = marketResource.price;
+  const {
+    stockPrice,
+    playerMoney,
+    operations: opp,
+  } = await getTransactionInfo(gameId, playerId, symbol, quantity);
   if (playerMoney < stockPrice * quantity) {
     throw new Error(`Player ${playerId} does not have enough money`);
   }
 
-  const operations = [
-    {
-      op: 'incr',
-      path: `/players/${playerId}/money`,
-      value: stockPrice * -quantity,
-    },
-    {
-      op: 'incr',
-      path: `/players/${playerId}/stocks/${symbol}`,
-      value: quantity,
-    },
-  ];
+  const operations = opp;
 
   const { statusCode, resource } = await gamesContainer
     .item(gameId, gameId)
@@ -380,7 +352,23 @@ export async function buyStock(gameId, playerId, symbol, quantity) {
  */
 export async function sellStock(gameId, playerId, symbol, quantity) {
   quantity = Math.abs(quantity);
-  // get game
+  const { stockPrice, numOfStocks, playerMoney, opp } =
+    await getTransactionInfo(gameId, playerId, symbol, -quantity);
+  // check if player has enough stocks
+  if (numOfStocks < quantity) {
+    throw new Error(`Player ${playerId} does not have enough stocks`);
+  }
+  const operations = opp;
+  const { statusCode, resource } = await gamesContainer
+    .item(gameId, gameId)
+    .patch(operations);
+  if (statusCode !== 200) {
+    return { statusCode: statusCode };
+  }
+  return { statusCode: statusCode, resource: resource };
+}
+
+async function getTransactionInfo(gameId, playerId, symbol, quantity) {
   const { statusCode: gameStatusCode, resource: gameResource } = await getGame(
     gameId
   );
@@ -399,32 +387,28 @@ export async function sellStock(gameId, playerId, symbol, quantity) {
   if (marketStatusCode !== 200) {
     throw new Error(`Market data for ${symbol} not found`);
   }
-
-  // check if player has enough stocks
-  const numOfStocks = game.players[playerId].stocks[symbol];
-  if (numOfStocks < quantity) {
-    throw new Error(`Player ${playerId} does not have enough stocks`);
-  }
-  let stockPrice = marketResource.price;
-
   const operations = [
     {
       op: 'incr',
       path: `/players/${playerId}/money`,
-      value: stockPrice * quantity,
+      value: stockPrice * -quantity,
     },
     {
       op: 'incr',
       path: `/players/${playerId}/stocks/${symbol}`,
-      value: -quantity,
+      value: quantity,
     },
   ];
 
-  const { statusCode, resource } = await gamesContainer
-    .item(gameId, gameId)
-    .patch(operations);
-  if (statusCode !== 200) {
-    return { statusCode: statusCode };
-  }
-  return { statusCode: statusCode, resource: resource };
+  // check if player has enough stocks
+  const numOfStocks = game.players[playerId].stocks[symbol];
+
+  const stockPrice = marketResource.price;
+
+  return {
+    stockPrice: stockPrice,
+    numOfStocks: numOfStocks,
+    playerMoney: playerMoney,
+    operations: operations,
+  };
 }
