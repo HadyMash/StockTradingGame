@@ -3,6 +3,7 @@ export const MAX_PLAYERS = 4;
 /**
  * Game class
  * @param {string} id game id (string)
+ * @param {string} hostId host id (string)
  * @param {GameSettings} settings game settings (GameSettings)
  * @param {Object<string, Player>} players object of players (Object<string, Player>)
  * @param {Object} stockStartIds object of stock start ids
@@ -16,6 +17,7 @@ export class Game {
     players,
     stockStartIds,
     currentDay,
+    hostId,
     state = GameState.waiting
   ) {
     this.id = id;
@@ -24,6 +26,7 @@ export class Game {
     this.stockStartIds = stockStartIds;
     this.currentDay = currentDay;
     this.players = players;
+    this.hostId = hostId;
   }
 
   static generateId() {
@@ -44,6 +47,7 @@ export class Game {
       players: this.players,
       stockStartIds: this.stockStartIds,
       currentDay: this.currentDay,
+      hostId: this.hostId,
     };
   }
 
@@ -54,6 +58,7 @@ export class Game {
       obj.players,
       obj.stockStartIds,
       obj.currentDay,
+      obj.hostId,
       obj.state
     );
   }
@@ -73,13 +78,21 @@ export class Game {
  * @param {number} roundDurationSeconds round duration in seconds (number)
  * @param {number} startingMoney starting money (number)
  * @param {number} targetMoney target money a player has to reach for the game to end (0 for turns only) (number)
+ * @param {maxPlayers} maxPlayers max players (number)
  */
 export class GameSettings {
-  constructor(maxGameTurns, roundDurationSeconds, startingMoney, targetMoney) {
+  constructor(
+    maxGameTurns,
+    roundDurationSeconds,
+    startingMoney,
+    targetMoney,
+    maxPlayers
+  ) {
     this.maxGameTurns = maxGameTurns;
     this.roundDurationSeconds = roundDurationSeconds;
     this.startingMoney = startingMoney;
     this.targetMoney = targetMoney;
+    this.maxPlayers = maxPlayers;
   }
 
   toObject() {
@@ -88,6 +101,7 @@ export class GameSettings {
       roundDurationSeconds: this.roundDurationSeconds,
       targetMoney: this.targetMoney,
       startingMoney: this.startingMoney,
+      maxPlayers: this.maxPlayers,
     };
   }
 
@@ -96,7 +110,8 @@ export class GameSettings {
       obj.maxGameTurns,
       obj.roundDurationSeconds,
       obj.startingMoney,
-      obj.targetMoney
+      obj.targetMoney,
+      obj.maxPlayers
     );
   }
 

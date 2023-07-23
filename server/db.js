@@ -1,5 +1,5 @@
 import { CosmosClient } from '@azure/cosmos';
-import { Game } from './game.js';
+import { Game, GameState } from './game.js';
 import { Player } from './player.js';
 // TODO: add more detailed documentation
 
@@ -11,7 +11,14 @@ const stockEntryCount = {
   GOOG: 4650,
   TSLA: 3140,
 };
-function getRandomSymbolId(symbol, maxGameDuration) {
+/**
+ *
+ * @param {string} symbol - the symbol of the stock
+ * @param {number} maxGameDuration maximum number of turns
+ * @param {number} buffer - a buffer in case you need to show buffer days before the game starts
+ * @returns
+ */
+function getRandomSymbolId(symbol, maxGameDuration, buffer = 0) {
   if (!symbol || !stockEntryCount[symbol]) {
     throw new Error('Invalid symbol');
   }
@@ -24,7 +31,10 @@ function getRandomSymbolId(symbol, maxGameDuration) {
     );
   }
   return Math.floor(
-    Math.random() * (stockEntryCount[symbol] - maxGameDuration)
+    Math.random() *
+      (stockEntryCount[symbol] -
+        Math.floor(maxGameDuration) -
+        Math.floor(buffer))
   );
 }
 
@@ -248,17 +258,24 @@ export async function getGame(id) {
  * @param {Player} host (Player)
  * @returns {Game} the created game (Game)
  */
-export async function createNewGame(host, gameSettings, stockStartIds) {
+export async function createNewGame(hostName, gameSettings, stockStartIds) {
+  // create player
+  const player = new Player(
+    Player.generateId(),
+    hostName,
+    gameSettings.startingMoney
+  );
   // generate unique id
-  const id = await generateUniqueId();
+  const gameId = await generateUniqueId();
   let game = new Game(
-    id,
-    gameSettings,
+    gameId,
+    gameSettings.toObject(),
     {
-      [host.id]: host.toObject(),
+      [player.id]: player.toObject(),
     },
     stockStartIds,
-    0
+    0,
+    player.id
   );
   try {
     var { statusCode, resource } = await gamesContainer.items.create(
@@ -266,6 +283,7 @@ export async function createNewGame(host, gameSettings, stockStartIds) {
     );
     return {
       statusCode: statusCode,
+      player: player.toObject(),
       resource: resource,
     };
   } catch (e) {
@@ -289,6 +307,9 @@ export async function addPlayerToGame(gameId, playerName) {
     throw new Error('Game not found');
   }
   const game = Game.fromObject(gameResponse.resource);
+  if (Object.keys(game.players).length >= game.settings.maxPlayers) {
+    throw new Error('Game is full');
+  }
 
   {
     var id;
@@ -303,15 +324,67 @@ export async function addPlayerToGame(gameId, playerName) {
   const operations = [
     { op: 'add', path: `/players/${player.id}`, value: player.toObject() },
   ];
+  try {
+    var { statusCode, resource } = await gamesContainer
+      .item(gameId.toString(), gameId.toString())
+      .patch(operations);
+
+    return {
+      statusCode: statusCode,
+      player: player.toObject(),
+      resource: resource,
+    };
+  } catch (error) {
+    return {
+      statusCode: statusCode,
+      error: error.toObject(),
+    };
+  }
+}
+// TODO: remove player from game
+
+/**
+ * Updates the game's state
+ * @param {string} gameId game id (string)
+ * @param {GameState} state game state (GameState)
+ * @returns {Object} statusCode and resource
+ */
+async function setGameState(gameId, state) {
+  const operations = [{ op: 'replace', path: '/state', value: state }];
   const { statusCode, resource } = await gamesContainer
     .item(gameId.toString(), gameId.toString())
     .patch(operations);
-
   return {
     statusCode: statusCode,
     resource: resource,
   };
 }
+
+/**
+ * Set's the game's state to GameState.active
+ * @param {string} gameId - the id of the game (string)
+ * @param {string} playerId - the id of the player starting the game (string)
+ */
+export async function startGame(gameId, playerId) {
+  const gameResponse = await getGame(gameId);
+  if (gameResponse.statusCode !== 200) {
+    throw new Error('Game not found');
+  }
+  const game = Game.fromObject(gameResponse.resource);
+  if (game.hostId !== playerId) {
+    throw new Error('Player is not the host');
+  }
+
+  return await setGameState(gameId, GameState.active);
+}
+
+/**
+ * Sets the game's state to GameState.finished
+ */
+export async function endGame(gameId) {
+  return await setGameState(gameId, GameState.ended);
+}
+
 /**
  * updates the player money and stock values based on the desired transaction (buy) in the db
  * @param {string} gameId
@@ -368,6 +441,14 @@ export async function sellStock(gameId, playerId, symbol, quantity) {
   return { statusCode: statusCode, resource: resource };
 }
 
+/**
+ *
+ * @param {string} gameId game id
+ * @param {string} playerId player id
+ * @param {string} symbol symbol of the stock
+ * @param {number} quantity amount to trade
+ * @returns
+ */
 async function getTransactionInfo(gameId, playerId, symbol, quantity) {
   const { statusCode: gameStatusCode, resource: gameResource } = await getGame(
     gameId
@@ -376,6 +457,11 @@ async function getTransactionInfo(gameId, playerId, symbol, quantity) {
     throw new Error(`Game ${gameId} not found`);
   }
   const game = Game.fromObject(gameResource);
+
+  if (game.state !== GameState.active) {
+    throw new Error(`Game ${gameId} is not active`);
+  }
+
   let playerMoney = game.players[playerId].money;
 
   // get stock price
