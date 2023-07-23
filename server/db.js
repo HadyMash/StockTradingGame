@@ -312,6 +312,14 @@ export async function addPlayerToGame(gameId, playerName) {
     resource: resource,
   };
 }
+/**
+ * updates the player money and stock values based on the desired transaction (buy) in the db
+ * @param {string} gameId
+ * @param {string} playerId
+ * @param {string} symbol
+ * @param {int} quantity
+ * @returns player object with updated money and stocks
+ */
 export async function buyStock(gameId, playerId, symbol, quantity) {
   quantity = Math.abs(quantity);
   // get game
@@ -350,6 +358,65 @@ export async function buyStock(gameId, playerId, symbol, quantity) {
       op: 'incr',
       path: `/players/${playerId}/stocks/${symbol}`,
       value: quantity,
+    },
+  ];
+
+  const { statusCode, resource } = await gamesContainer
+    .item(gameId, gameId)
+    .patch(operations);
+  if (statusCode !== 200) {
+    return { statusCode: statusCode };
+  }
+  return { statusCode: statusCode, resource: resource };
+}
+
+/**
+ * updates the player money and stock values based on the desired transaction (sell) in the db
+ * @param {string} gameId
+ * @param {string} playerId
+ * @param {string} symbol
+ * @param {int} quantity
+ * @returns player object with updated money and stocks
+ */
+export async function sellStock(gameId, playerId, symbol, quantity) {
+  quantity = Math.abs(quantity);
+  // get game
+  const { statusCode: gameStatusCode, resource: gameResource } = await getGame(
+    gameId
+  );
+  if (gameStatusCode !== 200) {
+    throw new Error(`Game ${gameId} not found`);
+  }
+  const game = Game.fromObject(gameResource);
+  let playerMoney = game.players[playerId].money;
+
+  // get stock price
+  const { statusCode: marketStatusCode, resource: marketResource } =
+    await getMarketDataEntry(
+      symbol,
+      game.stockStartIds[symbol] + game.currentDay
+    );
+  if (marketStatusCode !== 200) {
+    throw new Error(`Market data for ${symbol} not found`);
+  }
+
+  // check if player has enough stocks
+  const numOfStocks = game.players[playerId].stocks[symbol];
+  if (numOfStocks < quantity) {
+    throw new Error(`Player ${playerId} does not have enough stocks`);
+  }
+  let stockPrice = marketResource.price;
+
+  const operations = [
+    {
+      op: 'incr',
+      path: `/players/${playerId}/money`,
+      value: stockPrice * quantity,
+    },
+    {
+      op: 'incr',
+      path: `/players/${playerId}/stocks/${symbol}`,
+      value: -quantity,
     },
   ];
 
