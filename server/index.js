@@ -10,9 +10,10 @@ const app = express();
 //const socketIo = require('socket.io');
 //const io = socketIo(server);
 //import * as db from './db';
-import * as db from './db.js';
+//import * as db from './db.js';
 
-app.get('/marketdata', async (req, res) => {
+
+app.get('/api/marketdata', async (req, res) => {
   try {
     const symbol = req.params.symbol;
     const startId = parseInt(req.params.startId);
@@ -187,3 +188,5 @@ function getStock(stockName) {
 */
 const port = 3000;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
+
+
