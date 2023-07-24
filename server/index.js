@@ -1,4 +1,5 @@
 import express from 'express';
+import { GameSettings } from '../game.mjs';
 const app = express();
 //const server = require('http').Server(app);
 //const socketIo = require('socket.io');
@@ -7,82 +8,102 @@ const app = express();
 //import * as db from './db.js';
 
 app.post('/createNewGame', async (req, res) => {
-  try{
-    const hostName = req.body;
-    const response = await db.createNewGame(hostName); //rest of the paramaters?!
-    res.status(201).json({
-      success: true,
-      message: 'Game created successfully',
-      //game: game.toJSON(),
-    });
-    res.send(response);
-  }
-  catch (err) {
+  try {
+    const hostName = req.body.hostName;
+    const maxGameTurns = req.body.maxGameTurns;
+    const roundDurationSeconds = req.body.roundDurationSeconds;
+    const startingMoney = req.body.startingMoney;
+    const targetMoney = req.body.targetMoney;
+    const maxPlayers = req.body.maxPlayers;
+    const symbol = req.body.symbol;
+    if (
+      Number.isInteger(maxGameTurns) &&
+      Number.isInteger(roundDurationSeconds) &&
+      Number.isInteger(startingMoney) &&
+      Number.isInteger(targetMoney) &&
+      Number.isInteger(maxPlayers) &&
+      (symbol == "AAPL" || symbol == "AMZN" || symbol == "MSFT" || symbol == "GOOG" || symbol == "TSLA")
+    ) {
+
+      const gameSettings = new GameSettings(
+        maxGameTurns,
+        roundDurationSeconds,
+        startingMoney,
+        targetMoney,
+        maxPlayers
+      );
+
+      const stockStartIds = {
+        key: symbol,
+        id: getRandomSymbolId(symbol, maxGameDuration, 0)
+      };
+      const response = await db.createNewGame(hostName, gameSettings, stockStartIds);
+      res.status(201).json({
+        success: true,
+        message: 'Game created successfully',
+        //game: game.toJSON(),
+      });
+      res.send(response);
+    }else{
+      res.send("Invalid input!");
+    }
+  } catch (err) {
     console.error(err);
-    if (response.status == 201){
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create the game',
-      error: err.message,
-    })
+    if (response.status !== 201) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create the game',
+        error: err.message,
+      });
+    }
   }
-}
 });
 
 app.post('/AddPlayer', async (req, res) => {
-  try{
-    const gameId = req.params.gameId;
-    const playerName = req.bosy;
-    const response = await bd.addPlayerToGame();
-      res.status(201).json({
-        success: true,
-        message: 'Player added successfully',
-        //player,
-      });
-      res.send(response);
-    console.log(response);
-  }
-  catch (err) { 
-    if(response.status !== 201)
-    {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add player',
-      error: err.message,
+  try {
+    const gameId = req.body.gameId;
+    console.log(gameId);
+    console.log("hii");
+    const playerName = req.body.playerName;
+    console.log(playerName);
+    const response = await db.addPlayerToGame(gameId, playerName);
+    res.status(201).json({
+      success: true,
+      message: 'Player added successfully',
+      //player,
     });
+    res.send(response);
+    console.log(response);
+  } catch (err) {
+    if (response.statusCode !== 201) {
+      console.error(err);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to add player',
+        error: err.message,
+      });
+    }
   }
-}
 });
 app.delete('/removePlayer', async (req, res) => {
-  try{
+  try {
     const gameId = req.params.gameId;
     const playerId = req.params.playerId;
-
-  }
-  catch{
-
-  }
-})
+  } catch {}
+});
 app.post('/buying', async (req, res) => {
-  try{
+  try {
     const symbol = req.params.symbol;
     const quantity = req.body.quantity;
     const gameId = req.params.gameId;
     const playerId = req.params.playerId;
 
-    //const response = 
-
-  }
-  catch{
-
-  }
-  
-})
+    //const response =
+  } catch {}
+});
 
 app.post('/startTheGame', async (req, res) => {
-  try
-  {
+  try {
     const gameId = req.params.gameId;
     const playerId = req.params.playerId;
     const response = await db.startGame(gameId, playerId);
@@ -91,8 +112,7 @@ app.post('/startTheGame', async (req, res) => {
       message: 'Game started successfully',
       //game,
     });
-  }
-  catch (err) {
+  } catch (err) {
     console.error(err);
     res.status(500).json({
       success: false,
@@ -100,7 +120,7 @@ app.post('/startTheGame', async (req, res) => {
       error: err.message,
     });
   }
-})
+});
 app.get('/api/marketdata', async (req, res) => {
   try {
     const symbol = req.params.symbol;
@@ -112,7 +132,7 @@ app.get('/api/marketdata', async (req, res) => {
     console.error(err);
     res.status(500).send('Internal Server Error');
   }
-  console.log("succeeded");
+  console.log('succeeded');
 });
 
 app.get('/marketdata/random', async (req, res) => {
@@ -120,7 +140,11 @@ app.get('/marketdata/random', async (req, res) => {
     const symbol = req.params.symbol;
     const maxGameDuration = parseInt(req.params.maxGameDuration);
     const count = parseInt(req.params.count);
-    const data = await db.getRandomMarketDataEntries(symbol, maxGameDuration, count);
+    const data = await db.getRandomMarketDataEntries(
+      symbol,
+      maxGameDuration,
+      count
+    );
     res.status(200).json(data);
   } catch (err) {
     console.error(err);
@@ -138,9 +162,6 @@ app.post('/addmarketdata', async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
-
-
-
 
 //class MarketDatabase {
 // function GetStocks(stockName, startDate, endDate) {}
@@ -274,5 +295,3 @@ function getStock(stockName) {
 */
 const port = 3000;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
-
-
