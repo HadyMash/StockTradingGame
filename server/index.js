@@ -9,13 +9,13 @@ const app = express();
 
 app.post('/createNewGame', async (req, res) => {
   try {
-    const hostName = req.body.hostName;
-    const maxGameTurns = req.body.maxGameTurns;
-    const roundDurationSeconds = req.body.roundDurationSeconds;
-    const startingMoney = req.body.startingMoney;
-    const targetMoney = req.body.targetMoney;
-    const maxPlayers = req.body.maxPlayers;
-    const symbol = req.body.symbol;
+    const hostName = req.query.hostName;
+    const maxGameTurns = req.query.maxGameTurns;
+    const roundDurationSeconds = req.query.roundDurationSeconds;
+    const startingMoney = req.query.startingMoney;
+    const targetMoney = req.query.targetMoney;
+    const maxPlayers = req.query.maxPlayers;
+    const symbol = req.query.symbol;
     if (
       Number.isInteger(maxGameTurns) &&
       Number.isInteger(roundDurationSeconds) &&
@@ -49,42 +49,60 @@ app.post('/createNewGame', async (req, res) => {
     }
   } catch (err) {
     console.error(err);
-    if (response.status !== 201) {
       res.status(500).json({
         success: false,
         message: 'Failed to create the game',
         error: err.message,
       });
-    }
+    
   }
 });
 
 app.post('/AddPlayer', async (req, res) => {
   try {
-    const gameId = req.body.gameId;
+    const gameId = req.query.gameId;
     console.log(gameId);
-    console.log("hii");
-    const playerName = req.body.playerName;
+    //console.log("hii");
+    const playerName = req.query.playerName;
     console.log(playerName);
     const response = await db.addPlayerToGame(gameId, playerName);
     res.status(201).json({
       success: true,
       message: 'Player added successfully',
-      //player,
+      player,
     });
     res.send(response);
     console.log(response);
   } catch (err) {
-    if (response.statusCode !== 201) {
       console.error(err);
       res.status(500).json({
         success: false,
         message: 'Failed to add player',
         error: err.message,
       });
-    }
   }
 });
+
+app.post('/startTheGame', async (req, res) => {
+  try {
+    const gameId = req.query.gameId;
+    const playerId = req.query.playerId;
+    const response = await db.startGame(gameId, playerId);
+    res.status(200).json({
+      success: true,
+      message: 'Game started successfully',
+      //game,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start game',
+      error: err.message,
+    });
+  }
+});
+
 app.delete('/removePlayer', async (req, res) => {
   try {
     const gameId = req.params.gameId;
@@ -102,25 +120,6 @@ app.post('/buying', async (req, res) => {
   } catch {}
 });
 
-app.post('/startTheGame', async (req, res) => {
-  try {
-    const gameId = req.params.gameId;
-    const playerId = req.params.playerId;
-    const response = await db.startGame(gameId, playerId);
-    res.status(200).json({
-      success: true,
-      message: 'Game started successfully',
-      //game,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to start game',
-      error: err.message,
-    });
-  }
-});
 app.get('/api/marketdata', async (req, res) => {
   try {
     const symbol = req.params.symbol;
