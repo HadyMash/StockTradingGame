@@ -1,6 +1,6 @@
 import { CosmosClient } from '@azure/cosmos';
-import { Game, GameState } from './game.js';
-import { Player } from './player.js';
+import { Game, GameState } from '../game.js';
+import { Player } from '../player.js';
 
 // TODO: avoid hard coding later
 const stockEntryCount = {
