@@ -6,7 +6,101 @@ const app = express();
 //import * as db from './db';
 //import * as db from './db.js';
 
+app.post('/createNewGame', async (req, res) => {
+  try{
+    const hostName = req.body;
+    const response = await db.createNewGame(hostName); //rest of the paramaters?!
+    res.status(201).json({
+      success: true,
+      message: 'Game created successfully',
+      //game: game.toJSON(),
+    });
+    res.send(response);
+  }
+  catch (err) {
+    console.error(err);
+    if (response.status == 201){
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create the game',
+      error: err.message,
+    })
+  }
+}
+});
 
+app.post('/AddPlayer', async (req, res) => {
+  try{
+    const gameId = req.params.gameId;
+    const playerName = req.bosy;
+    const response = await bd.addPlayerToGame();
+      res.status(201).json({
+        success: true,
+        message: 'Player added successfully',
+        //player,
+      });
+      res.send(response);
+    console.log(response);
+  }
+  catch (err) { 
+    if(response.status !== 201)
+    {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add player',
+      error: err.message,
+    });
+  }
+}
+});
+app.delete('/removePlayer', async (req, res) => {
+  try{
+    const gameId = req.params.gameId;
+    const playerId = req.params.playerId;
+
+  }
+  catch{
+
+  }
+})
+app.post('/buying', async (req, res) => {
+  try{
+    const symbol = req.params.symbol;
+    const quantity = req.body.quantity;
+    const gameId = req.params.gameId;
+    const playerId = req.params.playerId;
+
+    //const response = 
+
+  }
+  catch{
+
+  }
+  
+})
+
+app.post('/startTheGame', async (req, res) => {
+  try
+  {
+    const gameId = req.params.gameId;
+    const playerId = req.params.playerId;
+    const response = await db.startGame(gameId, playerId);
+    res.status(200).json({
+      success: true,
+      message: 'Game started successfully',
+      //game,
+    });
+  }
+  catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start game',
+      error: err.message,
+    });
+  }
+})
 app.get('/api/marketdata', async (req, res) => {
   try {
     const symbol = req.params.symbol;
