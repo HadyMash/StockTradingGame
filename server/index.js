@@ -1,9 +1,3 @@
-/**
- * export COSMOS_ENDPOINT="https://delta.documents.azure.com:443/"
-export COSMOS_KEY="ogZtTqNUKrGr9jA89Fr2iTaveJzbMYJl8zpaq0bmx0ivFryPsOvl4zBJcXVD8CH91NeA4CPnSjRnACDbiZBJAw=="
- */
-
-
 import express from 'express';
 const app = express();
 //const server = require('http').Server(app);
@@ -132,8 +126,6 @@ app.post('/api/BUY', async (req, res) => {
   }
 });
 
-const player = getPlayer(playerName);
-player.mo;
 function getIndexOfMarketStock(stockName) {
   for (let i = 0; i < stocks.length; i++) {
     if (stockName == stocks[i].stockName) {
