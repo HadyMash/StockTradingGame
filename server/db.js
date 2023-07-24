@@ -1,6 +1,6 @@
 import { CosmosClient } from '@azure/cosmos';
-import { Game, GameState } from '../game.js';
 import { Player } from '../player.js';
+import { Game, GameSettings, GameState } from '../game.js';
 
 // TODO: avoid hard coding later
 const stockEntryCount = {
@@ -384,7 +384,10 @@ export async function removePlayerFromGame(gameId, playerId, requestId) {
  * @returns {Object} statusCode and resource
  */
 async function setGameState(gameId, state) {
-  const operations = [{ op: 'replace', path: '/state', value: state }];
+  const operations = [
+    { op: 'replace', path: '/state', value: state },
+    { op: 'add', path: '/startTimestamp', value: Date.now() },
+  ];
   const { statusCode, resource } = await gamesContainer
     .item(gameId.toString(), gameId.toString())
     .patch(operations);
@@ -505,7 +508,11 @@ async function getTransactionInfo(gameId, playerId, symbol, quantity) {
   const { statusCode: marketStatusCode, resource: marketResource } =
     await getMarketDataEntry(
       symbol,
-      game.stockStartIds[symbol] + game.currentDay
+      game.stockStartIds[symbol] +
+        Math.floor(
+          (Date.now() - game.startTimestamp) /
+            game.settings.roundDurationSeconds
+        )
     );
   if (marketStatusCode !== 200) {
     throw new Error(`Market data for ${symbol} not found`);

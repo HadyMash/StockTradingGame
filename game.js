@@ -5,7 +5,7 @@
  * @param {GameSettings} settings game settings (GameSettings)
  * @param {Object<string, Player>} players object of players (Object<string, Player>)
  * @param {Object} stockStartIds object of stock start ids
- * @param {number} currentDay current day (number)
+ * @param {number} startTimestamp current day (number)
  * @param {GameState} state game state (GameState)
  */
 export class Game {
@@ -14,7 +14,7 @@ export class Game {
     settings,
     players,
     stockStartIds,
-    currentDay,
+    startTimestamp,
     hostId,
     state = GameState.waiting
   ) {
@@ -22,7 +22,7 @@ export class Game {
     this.state = state;
     this.settings = settings;
     this.stockStartIds = stockStartIds;
-    this.currentDay = currentDay;
+    this.startTimestamp = startTimestamp;
     this.players = players;
     this.hostId = hostId;
   }
@@ -43,7 +43,7 @@ export class Game {
       settings: this.settings,
       players: this.players,
       stockStartIds: this.stockStartIds,
-      currentDay: this.currentDay,
+      startTimestamp: this.startTimestamp,
       hostId: this.hostId,
     };
   }
@@ -54,7 +54,7 @@ export class Game {
       obj.settings,
       obj.players,
       obj.stockStartIds,
-      obj.currentDay,
+      obj.startTimestamp,
       obj.hostId,
       obj.state
     );
