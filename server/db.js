@@ -1,3 +1,4 @@
+import { setTimeout } from 'timers/promises';
 import { CosmosClient } from '@azure/cosmos';
 import { Player } from '../player.mjs';
 import { Game, GameSettings, GameState } from '../game.mjs';
@@ -504,13 +505,13 @@ async function getTransactionInfo(gameId, playerId, symbol, quantity) {
 
   let playerMoney = game.players[playerId].money;
 
-  // get stock price
   const { statusCode: marketStatusCode, resource: marketResource } =
     await getMarketDataEntry(
       symbol,
       game.stockStartIds[symbol] +
         Math.floor(
           (Date.now() - game.startTimestamp) /
+            1000 /
             game.settings.roundDurationSeconds
         )
     );
@@ -539,3 +540,18 @@ async function getTransactionInfo(gameId, playerId, symbol, quantity) {
     operations: operations,
   };
 }
+
+// ! temp // TODO: remove after testing
+const a = await createNewGame('hady', new GameSettings(20, 20, 1000, 2000), {
+  MSFT: 0,
+});
+console.log('create new game', a);
+const b = await addPlayerToGame(a.resource.id, 'yahia');
+console.log('add player to game', b);
+const c = await startGame(a.resource.id, a.player.id);
+console.log('start game', c);
+const d = await buyStock(a.resource.id, b.player.id, 'MSFT', 1);
+console.log('buy stock', d);
+await setTimeout(25000);
+const e = await buyStock(a.resource.id, a.player.id, 'MSFT', 1);
+console.log('buy stock', e);
