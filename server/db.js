@@ -491,6 +491,15 @@ export async function sellStock(gameId, playerId, symbol, quantity) {
  * @returns
  */
 async function getTransactionInfo(gameId, playerId, symbol, quantity) {
+  if (!gameId) {
+    throw new Error('Invalid gameId');
+  }
+  if (!playerId) {
+    throw new Error('Invalid playerId');
+  }
+  if (!quantity) {
+    throw new Error('Invalid quantity');
+  }
   const { statusCode: gameStatusCode, resource: gameResource } = await getGame(
     gameId
   );
@@ -498,6 +507,10 @@ async function getTransactionInfo(gameId, playerId, symbol, quantity) {
     throw new Error(`Game ${gameId} not found`);
   }
   const game = Game.fromObject(gameResource);
+
+  if (!symbol || !game.stockStartIds[symbol]) {
+    throw new Error('Invalid symbol');
+  }
 
   if (game.state !== GameState.active) {
     throw new Error(`Game ${gameId} is not active`);
@@ -540,18 +553,3 @@ async function getTransactionInfo(gameId, playerId, symbol, quantity) {
     operations: operations,
   };
 }
-
-// ! temp // TODO: remove after testing
-const a = await createNewGame('hady', new GameSettings(20, 20, 1000, 2000), {
-  MSFT: 0,
-});
-console.log('create new game', a);
-const b = await addPlayerToGame(a.resource.id, 'yahia');
-console.log('add player to game', b);
-const c = await startGame(a.resource.id, a.player.id);
-console.log('start game', c);
-const d = await buyStock(a.resource.id, b.player.id, 'MSFT', 1);
-console.log('buy stock', d);
-await setTimeout(25000);
-const e = await buyStock(a.resource.id, a.player.id, 'MSFT', 1);
-console.log('buy stock', e);
