@@ -1,4 +1,84 @@
 /* TODO: add our own font */
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* TODO: add primary, secondary, etc. variables */
+  --primary-color: #d1345b;
+  --secondary-color: #34d1bf;
+  --secondary-color-accent: #2eb5a8;
+  --border-radius: 10px;
+}
+
+.divider-with-text {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 10px 0;
+}
+
+.divider-with-text > .divider {
+  flex-grow: 1;
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 0 20px;
+}
+
+.divider-with-text > .content {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #e0e0e0;
+}
+
+.container {
+  background-color: var(--primary-color);
+  /* TODO: make size responsive */
+  width: 400px;
+  /* vertical horizontal */
+  padding: 30px 30px;
+  border-radius: var(--border-radius);
+}
+
+.container * {
+  /* vertical horizontal */
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.container input[type='text'] {
+  width: 100%;
+  padding: 16px 20px;
+  display: inline-block;
+  border: 0;
+  box-sizing: border-box;
+  border-radius: var(--border-radius);
+}
+
+.container button {
+  width: 100%;
+  font-weight: 700;
+  font-size: 18px;
+  padding: 16px 20px;
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  text-align: center;
+  transition: background-color 0.1s ease;
+}
+.container button:hover {
+  background-color: var(--secondary-color-accent);
+  cursor: pointer;
+}
+
+.center-horizontally {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.center-absolute {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
