@@ -1,3 +1,4 @@
+import * as db from './db.js';
 import express from 'express';
 import { GameSettings } from '../game.mjs';
 const app = express();
@@ -5,26 +6,23 @@ const app = express();
 //const socketIo = require('socket.io');
 //const io = socketIo(server);
 //import * as db from './db';
-//import * as db from './db.js';
+app.use(express.json());
 
 app.post('/createNewGame', async (req, res) => {
   try {
-    const hostName = req.query.hostName;
-    const maxGameTurns = req.query.maxGameTurns;
-    const roundDurationSeconds = req.query.roundDurationSeconds;
-    const startingMoney = req.query.startingMoney;
-    const targetMoney = req.query.targetMoney;
-    const maxPlayers = req.query.maxPlayers;
-    const symbol = req.query.symbol;
+    const hostName = req.body.hostName;
+    const maxGameTurns = req.body.maxGameTurns;
+    const roundDurationSeconds = req.body.roundDurationSeconds;
+    const startingMoney = req.body.startingMoney;
+    const targetMoney = req.body.targetMoney;
+    const maxPlayers = req.body.maxPlayers;
     if (
       Number.isInteger(maxGameTurns) &&
       Number.isInteger(roundDurationSeconds) &&
       Number.isInteger(startingMoney) &&
       Number.isInteger(targetMoney) &&
-      Number.isInteger(maxPlayers) &&
-      (symbol == "AAPL" || symbol == "AMZN" || symbol == "MSFT" || symbol == "GOOG" || symbol == "TSLA")
+      Number.isInteger(maxPlayers)
     ) {
-
       const gameSettings = new GameSettings(
         maxGameTurns,
         roundDurationSeconds,
@@ -34,27 +32,29 @@ app.post('/createNewGame', async (req, res) => {
       );
 
       const stockStartIds = {
-        key: symbol,
-        id: getRandomSymbolId(symbol, maxGameDuration, 0)
+        MSFT: db.getRandomSymbolId('MSFT', maxGameTurns, 0),
+        GOOG: db.getRandomSymbolId('GOOG', maxGameTurns, 0)
       };
-      const response = await db.createNewGame(hostName, gameSettings, stockStartIds);
+      const response = await db.createNewGame(
+        hostName,
+        gameSettings,
+        stockStartIds
+      );
       res.status(201).json({
         success: true,
         message: 'Game created successfully',
-        //game: game.toJSON(),
       });
-      res.send(response);
-    }else{
-      res.send("Invalid input!");
+      res.send(response.player);
+    } else {
+      res.send('Invalid input!');
     }
   } catch (err) {
     console.error(err);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to create the game',
-        error: err.message,
-      });
-    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create the game',
+      error: err.message,
+    });
   }
 });
 
@@ -62,7 +62,6 @@ app.post('/AddPlayer', async (req, res) => {
   try {
     const gameId = req.query.gameId;
     console.log(gameId);
-    //console.log("hii");
     const playerName = req.query.playerName;
     console.log(playerName);
     const response = await db.addPlayerToGame(gameId, playerName);
@@ -74,12 +73,12 @@ app.post('/AddPlayer', async (req, res) => {
     res.send(response);
     console.log(response);
   } catch (err) {
-      console.error(err);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to add player',
-        error: err.message,
-      });
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add player',
+      error: err.message,
+    });
   }
 });
 
