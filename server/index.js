@@ -33,7 +33,7 @@ app.post('/createNewGame', async (req, res) => {
 
       const stockStartIds = {
         MSFT: db.getRandomSymbolId('MSFT', maxGameTurns, 0),
-        GOOG: db.getRandomSymbolId('GOOG', maxGameTurns, 0)
+        GOOG: db.getRandomSymbolId('GOOG', maxGameTurns, 0),
       };
       const response = await db.createNewGame(
         hostName,
@@ -65,7 +65,7 @@ app.post('/addPlayer', async (req, res) => {
     const response = await db.addPlayerToGame(gameId, playerName);
     res.status(201).json({
       success: true,
-      message: 'Player added successfully'
+      message: 'Player added successfully',
     });
     //res.send(response);
     console.log(response);
@@ -87,7 +87,7 @@ app.delete('/removePlayer', async (req, res) => {
     const response = await db.removePlayerFromGame(gameId, playerId, requestId);
     res.status(201).json({
       success: true,
-      message: 'Player removed successfully'
+      message: 'Player removed successfully',
     });
     //res.send(response);
     console.log(response);
@@ -138,16 +138,27 @@ app.post('/endGame', async (req, res) => {
   }
 });
 
-
-app.post('/buying', async (req, res) => {
+app.post('/buyStock', async (req, res) => {
   try {
-    const symbol = req.params.symbol;
+    const symbol = req.body.symbol;
     const quantity = req.body.quantity;
-    const gameId = req.params.gameId;
-    const playerId = req.params.playerId;
-
-    //const response =
-  } catch {}
+    const gameId = req.body.gameId;
+    const playerId = req.body.playerId;
+    const response = await db.buyStock(gameId, playerId, symbol, quantity);
+    res.status(201).json({
+      success: true,
+      message: 'Stock bought successfully'
+    });
+  } catch (err) {
+    if (res.status !== 201) {
+      console.error(err);
+      res.status(500).json({
+        success: false,
+        message: 'Stock not bought',
+        error: err.message,
+      });
+    }
+  }
 });
 
 app.post('/sellStock', async (req, res) => {
@@ -160,7 +171,7 @@ app.post('/sellStock', async (req, res) => {
     const response = await db.sellStock(gameId, playerId, symbol, quantity);
     res.status(201).json({
       success: true,
-      message: 'Stock sold successfully'
+      message: 'Stock sold successfully',
     });
     //res.send(response);
     console.log(response);
