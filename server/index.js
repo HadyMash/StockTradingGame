@@ -203,3 +203,9 @@ app.get('/getRandomStocks', async (req, res) => {
 
 const port = 3000;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
+
+
+
+//createNewgame---which info will be sent
+//getRandomStocks---rounds!
+//integers in create new game!
