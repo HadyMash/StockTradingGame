@@ -150,6 +150,30 @@ app.post('/buying', async (req, res) => {
   } catch {}
 });
 
+app.post('/sellStock', async (req, res) => {
+  try {
+    const gameId = req.body.gameId;
+    const playerId = req.body.playerId;
+    const symbol = req.body.symbol;
+    const quantity = req.body.quantity;
+
+    const response = await db.sellStock(gameId, playerId, symbol, quantity);
+    res.status(201).json({
+      success: true,
+      message: 'Stock sold successfully'
+    });
+    //res.send(response);
+    console.log(response);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to sell stock',
+      error: err.message,
+    });
+  }
+});
+
 app.get('/api/marketdata', async (req, res) => {
   try {
     const symbol = req.params.symbol;
