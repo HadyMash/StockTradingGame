@@ -58,7 +58,7 @@ app.post('/createNewGame', async (req, res) => {
   }
 });
 
-app.post('/AddPlayer', async (req, res) => {
+app.post('/addPlayer', async (req, res) => {
   try {
     const gameId = req.body.gameId;
     const playerName = req.body.playerName;
@@ -74,6 +74,28 @@ app.post('/AddPlayer', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to add player',
+      error: err.message,
+    });
+  }
+});
+
+app.delete('/removePlayer', async (req, res) => {
+  try {
+    const gameId = req.body.gameId;
+    const playerId = req.body.playerId;
+    const requestId = req.body.requestId;
+    const response = await db.removePlayerFromGame(gameId, playerId, requestId);
+    res.status(201).json({
+      success: true,
+      message: 'Player removed successfully'
+    });
+    //res.send(response);
+    console.log(response);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove player',
       error: err.message,
     });
   }
@@ -99,12 +121,7 @@ app.post('/startTheGame', async (req, res) => {
   }
 });
 
-app.delete('/removePlayer', async (req, res) => {
-  try {
-    const gameId = req.params.gameId;
-    const playerId = req.params.playerId;
-  } catch {}
-});
+
 app.post('/buying', async (req, res) => {
   try {
     const symbol = req.params.symbol;
