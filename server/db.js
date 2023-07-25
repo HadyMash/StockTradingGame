@@ -18,7 +18,7 @@ const stockEntryCount = {
  * @param {number} buffer - a buffer in case you need to show buffer days before the game starts
  * @returns
  */
-function getRandomSymbolId(symbol, maxGameDuration, buffer = 0) {
+export function getRandomSymbolId(symbol, maxGameDuration, buffer = 0) {
   if (!symbol || !stockEntryCount[symbol]) {
     throw new Error('Invalid symbol');
   }
