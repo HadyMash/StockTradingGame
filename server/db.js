@@ -423,7 +423,7 @@ export async function startGame(gameId, playerId) {
  * Sets the game's state to GameState.finished
  */
 export async function endGame(gameId) {
-  return await setGameState(gameId, GameState.ended);
+  return await setGameState(gameId, GameState.finished);
 }
 
 /**

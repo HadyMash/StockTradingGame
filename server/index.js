@@ -101,21 +101,38 @@ app.delete('/removePlayer', async (req, res) => {
   }
 });
 
-app.post('/startTheGame', async (req, res) => {
+app.post('/startGame', async (req, res) => {
   try {
-    const gameId = req.query.gameId;
-    const playerId = req.query.playerId;
+    const gameId = req.body.gameId;
+    const playerId = req.body.playerId;
     const response = await db.startGame(gameId, playerId);
     res.status(200).json({
       success: true,
       message: 'Game started successfully',
-      //game,
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({
       success: false,
       message: 'Failed to start game',
+      error: err.message,
+    });
+  }
+});
+
+app.post('/endGame', async (req, res) => {
+  try {
+    const gameId = req.body.gameId;
+    const response = await db.endGame(gameId);
+    res.status(200).json({
+      success: true,
+      message: 'Game ended successfully',
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to end game',
       error: err.message,
     });
   }
