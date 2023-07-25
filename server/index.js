@@ -40,11 +40,11 @@ app.post('/createNewGame', async (req, res) => {
         gameSettings,
         stockStartIds
       );
-      res.status(201).json({
-        success: true,
-        message: 'Game created successfully',
-      });
-      res.send(response.player);
+      // res.status(201).json({
+      //   success: true,
+      //   message: 'Game created successfully',
+      // });
+      res.send(response);
     } else {
       res.send('Invalid input!');
     }
@@ -60,17 +60,14 @@ app.post('/createNewGame', async (req, res) => {
 
 app.post('/AddPlayer', async (req, res) => {
   try {
-    const gameId = req.query.gameId;
-    console.log(gameId);
-    const playerName = req.query.playerName;
-    console.log(playerName);
+    const gameId = req.body.gameId;
+    const playerName = req.body.playerName;
     const response = await db.addPlayerToGame(gameId, playerName);
     res.status(201).json({
       success: true,
-      message: 'Player added successfully',
-      player,
+      message: 'Player added successfully'
     });
-    res.send(response);
+    //res.send(response);
     console.log(response);
   } catch (err) {
     console.error(err);
