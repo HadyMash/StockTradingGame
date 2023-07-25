@@ -8,6 +8,29 @@
   --border-radius: 10px;
 }
 
+body {
+  margin: 0;
+}
+
+.center-horizontally {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.center-absolute {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.inline-children {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
 .divider-with-text {
   display: flex;
   align-items: center;
@@ -68,17 +91,4 @@
 .container button:hover {
   background-color: var(--secondary-color-accent);
   cursor: pointer;
-}
-
-.center-horizontally {
-  display: flex;
-  width: 100%;
-  justify-content: center;
-}
-
-.center-absolute {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
