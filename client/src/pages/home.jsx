@@ -10,6 +10,7 @@ function Home() {
   // TODO: check if i can remove the name state
   const [name, setName] = useState('');
   const [gameId, setGameId] = useState('');
+  const [maxRounds, setMaxRounds] = useState(20);
 
   function handleJoinGame() {
     // ! temp
@@ -55,7 +56,7 @@ function Home() {
           onChange={(e) => setName(e.target.value)}
         />
         {showCreateGame ? (
-          <CreateGame />
+          <CreateGame maxRounds={maxRounds} setMaxRounds={setMaxRounds} />
         ) : (
           <JoinGame
             gameId={gameId}
@@ -90,8 +91,53 @@ function JoinGame({ gameId, setGameId, handleJoinGame }) {
   );
 }
 
-function CreateGame() {
-  return <div>Create Game</div>;
+function CreateGame({ maxRounds, setMaxRounds }) {
+  CreateGame.propTypes = {
+    maxRounds: PropTypes.number.isRequired,
+    setMaxRounds: PropTypes.func.isRequired,
+  };
+
+  return (
+    <React.Fragment>
+      <GameSettingSlider
+        title={'Rounds'}
+        min={5}
+        max={50}
+        value={maxRounds}
+        setValue={setMaxRounds}
+      />
+    </React.Fragment>
+  );
+}
+
+function GameSettingSlider({ title, min, max, value, setValue }) {
+  GameSettingSlider.propTypes = {
+    title: PropTypes.string.isRequired,
+    min: PropTypes.number.isRequired,
+    max: PropTypes.number.isRequired,
+    value: PropTypes.number.isRequired,
+    setValue: PropTypes.func.isRequired,
+  };
+
+  return (
+    <div className="slider-flex">
+      <p>{title}:</p>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      ></input>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      ></input>
+    </div>
+  );
 }
 
 function GoBack({ setShowCreateGame }) {

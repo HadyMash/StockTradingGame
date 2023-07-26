@@ -103,3 +103,37 @@ body {
   background-color: var(--secondary-color-accent);
   cursor: pointer;
 }
+
+.container .slider-flex {
+  display: flex;
+  flex-direction: row;
+  /* justify-content: space-between; */
+  align-items: center;
+}
+
+.container .slider-flex p {
+  color: white;
+  font-size: 18px;
+  margin-right: 10px;
+  font-weight: 700;
+}
+
+.container .slider-flex input[type='range'] {
+  flex-grow: 1;
+}
+
+.container .slider-flex input[type='number'] {
+  margin-left: 10px;
+  font-size: 16px;
+  padding: 10px;
+  text-align: center;
+  background-color: white;
+  border: none;
+  border-radius: var(--border-radius);
+}
+.container .slider-flex input[type='number']::-webkit-outer-spin-button,
+.container .slider-flex input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
