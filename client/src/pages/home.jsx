@@ -10,12 +10,21 @@ function Home() {
   const [name, setName] = useState('');
   const [gameId, setGameId] = useState('');
 
-  function joinGameRequest() {
+  function handleJoinGame() {
     // ! temp
     console.log('joinGameRequest');
     // TODO: validate
     // TODO: send request
     // TODO: handle response
+  }
+
+  function handleCreateGame() {
+    if (showCreateGame) {
+      // ! temp
+      console.log('createGameRequest');
+    } else {
+      setShowCreateGame(true);
+    }
   }
 
   function JoinGame() {
@@ -27,9 +36,8 @@ function Home() {
           value={gameId}
           onChange={(e) => setGameId(e.target.value.toUpperCase())}
         />
-        <button onClick={joinGameRequest}>Join Game</button>
+        <button onClick={handleJoinGame}>Join Game</button>
         <DividerWithText>or</DividerWithText>
-        <button onClick={() => setShowCreateGame(true)}>Create Game</button>
       </React.Fragment>
     );
   }
@@ -70,6 +78,7 @@ function Home() {
           onChange={(e) => setName(e.target.value)}
         />
         {showCreateGame ? <CreateGame /> : <JoinGame />}
+        <button onClick={handleCreateGame}>Create Game</button>
       </div>
     </div>
   );

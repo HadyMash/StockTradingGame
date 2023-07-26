@@ -47,7 +47,7 @@ body {
 
 .divider-with-text > .content {
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   color: #e0e0e0;
 }
@@ -57,7 +57,7 @@ body {
   /* TODO: make size responsive */
   width: 400px;
   /* vertical horizontal */
-  padding: 30px 30px;
+  padding: 25px 30px;
   border-radius: var(--border-radius);
 }
 
