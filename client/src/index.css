@@ -74,6 +74,17 @@ body {
   border: 0;
   box-sizing: border-box;
   border-radius: var(--border-radius);
+  background-color: white;
+  transition: background-color 0.2s ease;
+}
+
+.container input[type='text']:hover {
+  background-color: rgb(230, 230, 230);
+}
+
+.container input[type='text']:focus {
+  background-color: white;
+  outline: none;
 }
 
 .container button {
