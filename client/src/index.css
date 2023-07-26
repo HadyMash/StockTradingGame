@@ -3,12 +3,16 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   /* TODO: add primary, secondary, etc. variables */
   --primary-color: #d1345b;
+  --primary-color-accent: #b52e4f;
   --secondary-color: #34d1bf;
   --secondary-color-accent: #2eb5a8;
+  --content-background-color: rgb(231, 231, 231);
   --border-radius: 10px;
 }
 
+html,
 body {
+  height: 100%;
   margin: 0;
 }
 
@@ -23,6 +27,22 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+.space-between-flex {
+  display: flex;
+  justify-content: space-between;
+}
+
+.space-around-flex {
+  display: flex;
+  justify-content: space-around;
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .inline-children {
@@ -131,9 +151,96 @@ body {
   border: none;
   border-radius: var(--border-radius);
 }
-.container .slider-flex input[type='number']::-webkit-outer-spin-button,
-.container .slider-flex input[type='number']::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+
+.game-grid {
+  display: grid;
+  height: auto;
+  box-sizing: border-box;
+  height: 100vh;
+  width: 100vw;
+  padding: 10px;
+  gap: 10px;
+  grid-template-columns: 1fr 475px 105px;
 }
 
+.game-grid > .panel {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  background-color: var(--content-background-color);
+  border-radius: var(--border-radius);
+}
+
+.account {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: nowrap;
+  flex-direction: column;
+  padding: 10px 20px;
+  overflow: hidden;
+}
+
+.account > .title {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.account > .holdings {
+  flex-grow: 1;
+  height: 100%;
+}
+
+.account > .trade {
+  display: flex;
+  flex-direction: column;
+  margin: 20px 0px;
+}
+
+.account > .trade h2 {
+  margin: 0;
+  margin-bottom: 10px;
+}
+
+.account > .trade input[type='number'] {
+  margin: 10px 0;
+  padding: 12px;
+  font-size: 18px;
+  background-color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  transition: background-color 0.2s ease;
+}
+
+.account > .trade input[type='number']:hover {
+  background-color: rgb(245, 245, 245);
+}
+
+.account > .trade button {
+  flex-grow: 1;
+  margin-top: 18px;
+  padding: 15px;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  transition: background-color 0.1s ease;
+}
+
+.sell {
+  background-color: var(--primary-color);
+  margin-right: 10px;
+}
+.sell:hover {
+  background-color: var(--primary-color-accent);
+}
+
+.buy {
+  background-color: var(--secondary-color);
+  margin-left: 10px;
+}
+.buy:hover {
+  background-color: var(--secondary-color-accent);
+}
