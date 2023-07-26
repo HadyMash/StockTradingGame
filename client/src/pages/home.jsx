@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 
 import DividerWithText from '../shared/DividerWithText';
 
-// TODO: fix bug where text field loses focus after typing one character
 function Home() {
   const [showCreateGame, setShowCreateGame] = useState(false);
   const [name, setName] = useState('');
@@ -27,43 +27,6 @@ function Home() {
     }
   }
 
-  function JoinGame() {
-    return (
-      <React.Fragment>
-        <input
-          type="text"
-          placeholder="Game ID"
-          value={gameId}
-          onChange={(e) => setGameId(e.target.value.toUpperCase())}
-        />
-        <button onClick={handleJoinGame}>Join Game</button>
-        <DividerWithText>or</DividerWithText>
-      </React.Fragment>
-    );
-  }
-
-  function CreateGame() {
-    return <div>Create Game</div>;
-  }
-  console.log(showCreateGame);
-
-  function GoBack() {
-    return (
-      // TODO: format button properly
-      <button
-        className="inline-children"
-        onClick={() => setShowCreateGame(false)}
-      >
-        <FontAwesomeIcon style={{}} icon={faChevronLeft} />
-        <div style={{ width: '10px' }}></div>
-        <p style={{ fontSize: '16px' }}>Go Back</p>
-      </button>
-      // <button onClick={() => setShowCreateGame(false)}>
-      //   <i className="fas fa-arrow-left"></i>
-      // </button>
-    );
-  }
-
   return (
     <div className="center-absolute">
       <div className="center-horizontally">
@@ -77,10 +40,61 @@ function Home() {
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        {showCreateGame ? <CreateGame /> : <JoinGame />}
+        {showCreateGame ? (
+          <CreateGame />
+        ) : (
+          <JoinGame
+            gameId={gameId}
+            setGameId={setGameId}
+            handleJoinGame={handleJoinGame}
+          />
+        )}
         <button onClick={handleCreateGame}>Create Game</button>
       </div>
     </div>
+  );
+}
+
+function JoinGame({ gameId, setGameId, handleJoinGame }) {
+  JoinGame.propTypes = {
+    gameId: PropTypes.string.isRequired,
+    setGameId: PropTypes.func.isRequired,
+    handleJoinGame: PropTypes.func.isRequired,
+  };
+
+  return (
+    <React.Fragment>
+      <input
+        type="text"
+        placeholder="Game ID"
+        value={gameId}
+        onChange={(e) => setGameId(e.target.value.toUpperCase())}
+      />
+      <button onClick={handleJoinGame}>Join Game</button>
+      <DividerWithText>or</DividerWithText>
+    </React.Fragment>
+  );
+}
+
+function CreateGame() {
+  return <div>Create Game</div>;
+}
+
+function GoBack({ setShowCreateGame }) {
+  GoBack.propTypes = {
+    setShowCreateGame: PropTypes.func.isRequired,
+  };
+
+  return (
+    // TODO: format button properly
+    <button
+      className="inline-children"
+      onClick={() => setShowCreateGame(false)}
+    >
+      <FontAwesomeIcon style={{}} icon={faChevronLeft} />
+      <div style={{ width: '10px' }}></div>
+      <p style={{ fontSize: '16px' }}>Go Back</p>
+    </button>
   );
 }
 
