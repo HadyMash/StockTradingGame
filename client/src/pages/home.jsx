@@ -7,6 +7,7 @@ import DividerWithText from '../shared/DividerWithText';
 
 function Home() {
   const [showCreateGame, setShowCreateGame] = useState(false);
+  // TODO: check if i can remove the name state
   const [name, setName] = useState('');
   const [gameId, setGameId] = useState('');
 
@@ -14,6 +15,19 @@ function Home() {
     // ! temp
     console.log('joinGameRequest');
     // TODO: validate
+    let valid = true;
+    // check name
+    if (!name) {
+      // show name error
+    }
+
+    if (!gameId) {
+      // show game id error
+    }
+
+    if (!valid) {
+      return;
+    }
     // TODO: send request
     // TODO: handle response
   }
@@ -33,7 +47,7 @@ function Home() {
         <h1>STONKS</h1>
       </div>
       <div className="container">
-        {showCreateGame && <GoBack />}
+        {showCreateGame && <GoBack setShowCreateGame={setShowCreateGame} />}
         <input
           type="text"
           placeholder="Name"
