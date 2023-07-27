@@ -198,6 +198,7 @@ function GameSettingSlider({ title, min, max, value, setValue, step }) {
       <input
         type="number"
         min={min}
+        style={{ width: '5ch' }}
         max={max}
         value={value}
         onChange={(e) => setValue(e.target.value)}
