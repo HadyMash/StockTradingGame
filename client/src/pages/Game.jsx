@@ -45,6 +45,9 @@ function Holdings() {
   return (
     <div className="holdings-parent">
       <div className="holdings">
+        <h2 style={{ justifySelf: 'start' }}>Symbol</h2>
+        <h2 style={{ justifySelf: 'center' }}>Quantity</h2>
+        <h2 style={{ justifySelf: 'end' }}>Value</h2>
         <Asset symbol={'SMBL'} quantity={1} value={100} />
         <Asset symbol={'SMBL'} quantity={1} value={100} />
         <Asset symbol={'SMBL'} quantity={1} value={100} />
