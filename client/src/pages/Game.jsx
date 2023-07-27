@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import TextInput from '../shared/TextInput';
 
 // TODO: make game responsive
 function Game() {
@@ -105,8 +106,8 @@ function Trade({ symbol }) {
   return (
     <div className="trade">
       <h2>{symbol}</h2>
-      <input type="number" placeholder="Quantity" />
-      <input type="number" placeholder="Total" />
+      <TextInput type={'number'} prefix={'Quantity:'} />
+      <TextInput type="number" prefix="Total:" />
       <div className="space-around-flex">
         <button className="sell">Sell</button>
         <button className="buy">Buy</button>
