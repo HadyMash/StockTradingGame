@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
@@ -11,6 +11,10 @@ function Home() {
   const [name, setName] = useState('');
   const [gameId, setGameId] = useState('');
   const [maxRounds, setMaxRounds] = useState(20);
+  const [roundDuration, setRoundDuration] = useState(15);
+  const [startingMoney, setStartingMoney] = useState(500);
+  const [targetMoney, setTargetMoney] = useState(1.5);
+  const [maxPlayers, setMaxPlayers] = useState(5);
 
   function handleJoinGame() {
     // ! temp
@@ -56,7 +60,18 @@ function Home() {
           onChange={(e) => setName(e.target.value)}
         />
         {showCreateGame ? (
-          <CreateGame maxRounds={maxRounds} setMaxRounds={setMaxRounds} />
+          <CreateGame
+            maxRounds={maxRounds}
+            setMaxRounds={setMaxRounds}
+            roundDuration={roundDuration}
+            setRoundDuration={setRoundDuration}
+            startingMoney={startingMoney}
+            setStartingMoney={setStartingMoney}
+            targetMoney={targetMoney}
+            setTargetMoney={setTargetMoney}
+            maxPlayers={maxPlayers}
+            setMaxPlayers={setMaxPlayers}
+          />
         ) : (
           <JoinGame
             gameId={gameId}
@@ -91,10 +106,29 @@ function JoinGame({ gameId, setGameId, handleJoinGame }) {
   );
 }
 
-function CreateGame({ maxRounds, setMaxRounds }) {
+function CreateGame({
+  maxRounds,
+  setMaxRounds,
+  roundDuration,
+  setRoundDuration,
+  startingMoney,
+  setStartingMoney,
+  targetMoney,
+  setTargetMoney,
+  maxPlayers,
+  setMaxPlayers,
+}) {
   CreateGame.propTypes = {
     maxRounds: PropTypes.number.isRequired,
     setMaxRounds: PropTypes.func.isRequired,
+    roundDuration: PropTypes.number.isRequired,
+    setRoundDuration: PropTypes.func.isRequired,
+    startingMoney: PropTypes.number.isRequired,
+    setStartingMoney: PropTypes.func.isRequired,
+    targetMoney: PropTypes.number.isRequired,
+    setTargetMoney: PropTypes.func.isRequired,
+    maxPlayers: PropTypes.number.isRequired,
+    setMaxPlayers: PropTypes.func.isRequired,
   };
 
   return (
@@ -106,17 +140,48 @@ function CreateGame({ maxRounds, setMaxRounds }) {
         value={maxRounds}
         setValue={setMaxRounds}
       />
+      <GameSettingSlider
+        title={'Duration'}
+        min={10}
+        max={20}
+        value={roundDuration}
+        setValue={setRoundDuration}
+      />
+      <GameSettingSlider
+        title={'starting cash'}
+        min={100}
+        max={5000}
+        step={100}
+        value={startingMoney}
+        setValue={setStartingMoney}
+      />
+      <GameSettingSlider
+        title={'target money'}
+        min={1}
+        max={2}
+        step={0.1}
+        value={targetMoney}
+        setValue={setTargetMoney}
+      />
+      <GameSettingSlider
+        title={'players'}
+        min={2}
+        max={10}
+        value={maxPlayers}
+        setValue={setMaxPlayers}
+      />
     </React.Fragment>
   );
 }
 
-function GameSettingSlider({ title, min, max, value, setValue }) {
+function GameSettingSlider({ title, min, max, value, setValue, step }) {
   GameSettingSlider.propTypes = {
     title: PropTypes.string.isRequired,
     min: PropTypes.number.isRequired,
     max: PropTypes.number.isRequired,
     value: PropTypes.number.isRequired,
     setValue: PropTypes.func.isRequired,
+    step: PropTypes.number,
   };
 
   return (
@@ -126,6 +191,7 @@ function GameSettingSlider({ title, min, max, value, setValue }) {
         type="range"
         min={min}
         max={max}
+        step={step}
         value={value}
         onChange={(e) => setValue(e.target.value)}
       ></input>
@@ -147,11 +213,8 @@ function GoBack({ setShowCreateGame }) {
 
   return (
     // TODO: format button properly
-    <button
-      className="inline-children"
-      onClick={() => setShowCreateGame(false)}
-    >
-      <FontAwesomeIcon style={{}} icon={faChevronLeft} />
+    <button className="go-back" onClick={() => setShowCreateGame(false)}>
+      <FontAwesomeIcon icon={faChevronLeft} />
       <div style={{ width: '10px' }}></div>
       <p style={{ fontSize: '16px' }}>Go Back</p>
     </button>

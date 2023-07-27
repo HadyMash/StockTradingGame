@@ -25,10 +25,12 @@ body {
   transform: translate(-50%, -50%);
 }
 
-.inline-children {
+.container .go-back {
   display: flex;
-  flex-direction: row;
-  align-items: center;
+  width: 150px;
+}
+.container .go-back * {
+  margin: 1.5px;
 }
 
 .divider-with-text {
@@ -120,6 +122,10 @@ body {
 
 .container .slider-flex input[type='range'] {
   flex-grow: 1;
+  height: 5px;
+  border-radius: 5px;
+  background: white;
+  opacity: 0.7;
 }
 
 .container .slider-flex input[type='number'] {
@@ -136,4 +142,3 @@ body {
   -webkit-appearance: none;
   margin: 0;
 }
-
