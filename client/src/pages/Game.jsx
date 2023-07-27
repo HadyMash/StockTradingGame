@@ -42,7 +42,78 @@ function Account({ money, holdings }) {
 }
 
 function Holdings() {
-  return <div className="holdings"></div>;
+  return (
+    <div className="holdings-parent">
+      <div className="holdings">
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        <Asset symbol={'SMBL'} quantity={1} value={100} />
+      </div>
+      <div className="end-fade"></div>
+    </div>
+  );
+}
+
+function Asset({ symbol, quantity, value }) {
+  Asset.propTypes = {
+    symbol: PropTypes.string.isRequired,
+    quantity: PropTypes.number.isRequired,
+    value: PropTypes.number.isRequired,
+  };
+
+  return (
+    <React.Fragment>
+      <p className="symbol">{symbol}</p>
+      <p className="quantity">{quantity}</p>
+      <p className="value">${value}</p>
+    </React.Fragment>
+  );
 }
 
 function Trade({ symbol }) {

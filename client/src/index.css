@@ -160,7 +160,7 @@ input[type='number']::-webkit-inner-spin-button {
   width: 100vw;
   padding: 10px;
   gap: 10px;
-  grid-template-columns: 1fr 475px 105px;
+  grid-template-columns: 1fr 400px 105px;
 }
 
 .game-grid > .panel {
@@ -187,9 +187,48 @@ input[type='number']::-webkit-inner-spin-button {
   align-items: center;
 }
 
-.account > .holdings {
+.account .holdings-parent {
+  position: relative;
+  overflow: hidden;
+}
+
+.account .holdings {
+  position: relative;
+  display: grid;
   flex-grow: 1;
   height: 100%;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: min-content;
+  overflow-y: auto;
+}
+
+.end-fade {
+  position: absolute;
+  bottom: 0;
+  margin: 0 !important;
+  width: 100%;
+  height: 60px;
+  background: linear-gradient(
+    0deg,
+    var(--content-background-color) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+.holdings * {
+  font-size: 20px;
+  margin: 15px 0px;
+}
+
+.holdings .symbol {
+  font-weight: 700;
+  justify-self: start;
+}
+.holdings .quantity {
+  justify-self: center;
+}
+.holdings .value {
+  justify-self: end;
 }
 
 .account > .trade {
