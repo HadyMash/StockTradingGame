@@ -190,6 +190,7 @@ input[type='number']::-webkit-inner-spin-button {
 .account .holdings-parent {
   position: relative;
   overflow: hidden;
+  height: 100%;
 }
 
 .account .holdings {
@@ -223,12 +224,15 @@ input[type='number']::-webkit-inner-spin-button {
 .holdings .symbol {
   /* font-weight: 700; */
   justify-self: start;
+  font-family: 'IBM Plex Mono', monospace;
 }
 .holdings .quantity {
   justify-self: center;
+  font-family: 'IBM Plex Mono', monospace;
 }
 .holdings .value {
   justify-self: end;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 .account > .trade {
@@ -238,6 +242,7 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 .account > .trade h2 {
+  font-family: 'IBM Plex Mono', monospace;
   margin: 0;
   margin-bottom: 10px;
 }

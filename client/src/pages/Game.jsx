@@ -9,7 +9,19 @@ function Game() {
         <Chart />
       </div>
       <div className="panel account">
-        <Account money={300} holdings={{}} />
+        <Account
+          money={300}
+          holdings={{
+            SMBL: {
+              quantity: 1,
+              value: 100.12,
+            },
+            MSFT: {
+              quantity: 2,
+              value: 285.24,
+            },
+          }}
+        />
       </div>
       <div className="panel">
         <Players />
@@ -41,62 +53,25 @@ function Account({ money, holdings }) {
   );
 }
 
-function Holdings() {
+function Holdings({ holdings }) {
+  Holdings.propTypes = {
+    holdings: PropTypes.objectOf(PropTypes.object).isRequired,
+  };
+
   return (
     <div className="holdings-parent">
       <div className="holdings">
         <h2 style={{ justifySelf: 'start' }}>Symbol</h2>
         <h2 style={{ justifySelf: 'center' }}>Quantity</h2>
         <h2 style={{ justifySelf: 'end' }}>Value</h2>
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
-        <Asset symbol={'SMBL'} quantity={1} value={100} />
+        {Object.keys(holdings).map((symbol) => (
+          <Asset
+            key={symbol}
+            symbol={symbol}
+            quantity={holdings[symbol].quantity}
+            value={holdings[symbol].value}
+          />
+        ))}
       </div>
       <div className="end-fade"></div>
     </div>
