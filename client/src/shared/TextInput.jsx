@@ -1,6 +1,16 @@
 import PropTypes from 'prop-types';
 
-function TextInput({ type, name, id, min, max, prefix, value, setValue }) {
+function TextInput({
+  type,
+  name,
+  id,
+  min,
+  max,
+  prefix,
+  suffix: Suffix,
+  value,
+  setValue,
+}) {
   TextInput.propTypes = {
     type: PropTypes.string.isRequired,
     prefix: PropTypes.string,
@@ -10,6 +20,7 @@ function TextInput({ type, name, id, min, max, prefix, value, setValue }) {
     id: PropTypes.string,
     min: PropTypes.number,
     max: PropTypes.number,
+    suffix: PropTypes.func,
   };
 
   return (
@@ -24,6 +35,7 @@ function TextInput({ type, name, id, min, max, prefix, value, setValue }) {
         max={max}
         onChange={(e) => setValue(e.target.value)}
       />
+      {Suffix && <Suffix />}
     </div>
   );
 }
