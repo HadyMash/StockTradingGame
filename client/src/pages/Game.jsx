@@ -49,7 +49,7 @@ function Account({ money, holdings }) {
         <h1>${money}</h1>
       </div>
       <Holdings holdings={holdings} />
-      <Trade symbol={'SMBL'} />
+      <Trade symbol={'SMBL'} quantityAvailable={10} price={30} />
     </React.Fragment>
   );
 }
@@ -95,10 +95,15 @@ function Asset({ symbol, quantity, value }) {
   );
 }
 
-function Trade({ symbol }) {
+function Trade({ symbol, quantityAvailable, price }) {
   Trade.propTypes = {
     symbol: PropTypes.string.isRequired,
+    quantityAvailable: PropTypes.number.isRequired,
+    price: PropTypes.number.isRequired,
   };
+
+  const [quantity, setQuantity] = React.useState();
+  const [total, setTotal] = React.useState();
 
   // TODO: make it when you type in quantity or total, the other is updated
   // TODO: make it so when you type in quantity or total, prefix is added
@@ -106,8 +111,51 @@ function Trade({ symbol }) {
   return (
     <div className="trade">
       <h2>{symbol}</h2>
-      <TextInput type={'number'} prefix={'Quantity:'} />
-      <TextInput type="number" prefix="Total:" />
+      {/* TODO: style sliders to match the ones on the home page*/}
+      <TextInput
+        type="number"
+        prefix="Quantity:"
+        min={0}
+        max={quantityAvailable}
+        value={quantity}
+        setValue={(val) => {
+          setQuantity(val);
+          setTotal(val * price);
+        }}
+      />
+      <input
+        type="range"
+        value={quantity}
+        min={0}
+        max={quantityAvailable}
+        step={0.01}
+        onChange={(e) => {
+          setQuantity(e.target.value);
+          setTotal(e.target.value * price);
+        }}
+      />
+      <TextInput
+        type="number"
+        prefix={`Total:${total > 0 ? ' $' : ''}`}
+        min={0}
+        max={quantityAvailable * price}
+        value={total}
+        setValue={(val) => {
+          setTotal(val);
+          setQuantity(val / price);
+        }}
+      />
+      <input
+        type="range"
+        value={total}
+        min={0}
+        max={quantityAvailable * price}
+        step={0.01}
+        onChange={(e) => {
+          setTotal(e.target.value);
+          setQuantity(e.target.value / price);
+        }}
+      />
       <div className="space-around-flex">
         <button className="sell">Sell</button>
         <button className="buy">Buy</button>

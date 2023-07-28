@@ -222,7 +222,6 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 .holdings .symbol {
-  /* font-weight: 700; */
   justify-self: start;
   font-family: 'IBM Plex Mono', monospace;
 }
@@ -258,7 +257,7 @@ input[type='number']::-webkit-inner-spin-button {
   border: none;
   border-radius: var(--border-radius);
   transition: background-color 0.2s ease;
-  padding: 10px 15px;
+  padding: 10px 12px;
   font-size: 16px;
   font-family: 'IBM Plex Mono', monospace;
   font-weight: 500;
