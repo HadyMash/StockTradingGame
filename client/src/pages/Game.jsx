@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
-import React from 'react';
+import React, { useEffect } from 'react';
 import TextInput from '../shared/TextInput';
+
+// TODO: see where i can replace state with refs
 
 // TODO: make game responsive
 function Game() {
@@ -49,7 +51,12 @@ function Account({ money, holdings }) {
         <h1>${money}</h1>
       </div>
       <Holdings holdings={holdings} />
-      <Trade symbol={'SMBL'} quantityAvailable={10} price={30} />
+      <Trade
+        symbol={'SMBL'}
+        moneyAvailable={1000}
+        quantityAvailable={10}
+        price={30}
+      />
     </React.Fragment>
   );
 }
@@ -86,6 +93,8 @@ function Asset({ symbol, quantity, value }) {
     value: PropTypes.number.isRequired,
   };
 
+  // TODO: make symbol clickable
+  // TODO: add commas to value
   return (
     <React.Fragment>
       <p className="symbol">{symbol}</p>
@@ -95,70 +104,103 @@ function Asset({ symbol, quantity, value }) {
   );
 }
 
-function Trade({ symbol, quantityAvailable, price }) {
+function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
   Trade.propTypes = {
     symbol: PropTypes.string.isRequired,
+    moneyAvailable: PropTypes.number.isRequired,
     quantityAvailable: PropTypes.number.isRequired,
     price: PropTypes.number.isRequired,
   };
 
-  const [quantity, setQuantity] = React.useState();
-  const [total, setTotal] = React.useState();
+  // TODO: combine quantity and total into one state
+  const [quantity, setQuantity] = React.useState(0);
+  const [estimatedTotal, setEstimatedTotal] = React.useState(0);
+  const [showBuy, setShowBuy] = React.useState(true);
 
-  // TODO: make it when you type in quantity or total, the other is updated
-  // TODO: make it so when you type in quantity or total, prefix is added
+  const maxQuantity = showBuy
+    ? Math.round((100 * moneyAvailable) / price) / 100
+    : quantityAvailable;
+  const maxTotal = showBuy
+    ? moneyAvailable
+    : Math.round(100 * quantityAvailable * price) / 100;
+
+  useEffect(() => {
+    if (quantity > maxQuantity) setQuantity(maxQuantity);
+    if (estimatedTotal > maxTotal) setEstimatedTotal(maxTotal);
+  }, [showBuy, maxQuantity, maxTotal, quantity, estimatedTotal]);
+
+  // TODO: clamp quantity and total when toggling between buy and sell
+  const toggleShowBuy = () => setShowBuy((val) => !val);
+
   // TODO: add suffix to quantity and total
+
   return (
     <div className="trade">
-      <h2>{symbol}</h2>
-      {/* TODO: style sliders to match the ones on the home page*/}
+      <div className="header">
+        <h2>{symbol}</h2>
+        <div className="tabs">
+          <button
+            className="buy left"
+            disabled={showBuy}
+            onClick={toggleShowBuy}
+          >
+            Buy
+          </button>
+          <button
+            className="sell right"
+            disabled={!showBuy}
+            onClick={toggleShowBuy}
+          >
+            Sell
+          </button>
+        </div>
+      </div>
+      {/* // TODO: style sliders to match the ones on the home page */}
       <TextInput
         type="number"
         prefix="Quantity:"
         min={0}
-        max={quantityAvailable}
+        max={maxQuantity}
         value={quantity}
         setValue={(val) => {
           setQuantity(val);
-          setTotal(val * price);
-        }}
-      />
-      <input
-        type="range"
-        value={quantity}
-        min={0}
-        max={quantityAvailable}
-        step={0.01}
-        onChange={(e) => {
-          setQuantity(e.target.value);
-          setTotal(e.target.value * price);
+          setEstimatedTotal(Math.round(val * price * 100) / 100);
         }}
       />
       <TextInput
         type="number"
-        prefix={`Total:${total > 0 ? ' $' : ''}`}
+        // TODO: add approximate symbol
+        prefix={`Total:${estimatedTotal > 0 ? ' $' : ''}`}
         min={0}
-        max={quantityAvailable * price}
-        value={total}
+        max={maxTotal}
+        value={estimatedTotal}
         setValue={(val) => {
-          setTotal(val);
-          setQuantity(val / price);
+          const initialQuantity = val / price;
+          const roundedQuantity = Math.round(initialQuantity * 100) / 100;
+          const newTotal = roundedQuantity * price;
+          const roundedTotal = Math.round(newTotal * 100) / 100;
+
+          setEstimatedTotal(roundedTotal);
+          setQuantity(roundedQuantity);
         }}
       />
       <input
         type="range"
-        value={total}
+        value={quantity}
         min={0}
-        max={quantityAvailable * price}
+        max={maxQuantity}
         step={0.01}
         onChange={(e) => {
-          setTotal(e.target.value);
-          setQuantity(e.target.value / price);
+          setQuantity(e.target.value);
+          setEstimatedTotal(Math.round(e.target.value * price * 100) / 100);
         }}
       />
       <div className="space-around-flex">
-        <button className="sell">Sell</button>
-        <button className="buy">Buy</button>
+        {showBuy ? (
+          <button className="buy">Buy</button>
+        ) : (
+          <button className="sell">Sell</button>
+        )}
       </div>
     </div>
   );

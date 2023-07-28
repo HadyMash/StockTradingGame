@@ -6,6 +6,8 @@
   --primary-color-accent: #b52e4f;
   --secondary-color: #34d1bf;
   --secondary-color-accent: #2eb5a8;
+  --disabled-color: #8f8f8f;
+  --disabled-color-accent: #7a7a7a;
   --content-background-color: rgb(231, 231, 231);
   --border-radius: 10px;
 }
@@ -14,6 +16,23 @@ html,
 body {
   height: 100%;
   margin: 0;
+}
+
+button:hover {
+  cursor: pointer;
+}
+
+input[type='range']:hover {
+  cursor: pointer;
+}
+
+button:disabled {
+  background-color: var(--disabled-color) !important;
+}
+
+button:disabled:hover {
+  cursor: not-allowed;
+  background-color: var(--disabled-color-accent) !important;
 }
 
 .center-horizontally {
@@ -225,6 +244,10 @@ input[type='number']::-webkit-inner-spin-button {
   justify-self: start;
   font-family: 'IBM Plex Mono', monospace;
 }
+.holdings .symbol:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
 .holdings .quantity {
   justify-self: center;
   font-family: 'IBM Plex Mono', monospace;
@@ -248,6 +271,62 @@ input[type='number']::-webkit-inner-spin-button {
   font-family: 'IBM Plex Mono', monospace;
   margin: 0;
   margin-bottom: 10px;
+}
+
+.trade > .header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.header .tabs {
+  display: inline;
+}
+
+.trade > .header h2 {
+  margin: 0;
+}
+
+.tabs button {
+  margin: 0 !important;
+  /* vertical | horizontal */
+  padding: 5px 35px !important;
+  font-size: 1.1em !important;
+  font-weight: 600 !important;
+  background-color: var(--disabled-color) !important;
+}
+
+.tabs button:hover {
+  background-color: var(--disabled-color-accent) !important;
+}
+
+.tabs button:disabled,
+.tabs button:disabled:hover {
+  font-weight: 700 !important;
+}
+
+.tabs button:disabled.buy {
+  background-color: var(--secondary-color) !important;
+}
+
+.tabs button:disabled:hover.buy {
+  background-color: var(--secondary-color) !important;
+}
+
+.tabs button:disabled.sell {
+  background-color: var(--primary-color) !important;
+}
+
+.tabs button:disabled:hover.sell {
+  background-color: var(--primary-color-accent) !important;
+}
+
+.tabs > .left {
+  border-radius: 5px 0 0 5px !important;
+}
+
+.tabs > .right {
+  border-radius: 0 5px 5px 0 !important;
 }
 
 .custom-input {
@@ -297,7 +376,6 @@ input[type='number']::-webkit-inner-spin-button {
 
 .sell {
   background-color: var(--primary-color);
-  margin-right: 10px;
 }
 .sell:hover {
   background-color: var(--primary-color-accent);
@@ -305,7 +383,6 @@ input[type='number']::-webkit-inner-spin-button {
 
 .buy {
   background-color: var(--secondary-color);
-  margin-left: 10px;
 }
 .buy:hover {
   background-color: var(--secondary-color-accent);
