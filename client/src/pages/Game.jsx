@@ -142,7 +142,6 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
 
   // TODO: add suffix to quantity and total
 
-  // TODO: fix bug with typing in total and it adding a decimal
   return (
     <div className="trade">
       <div className="header">
@@ -186,10 +185,7 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
         setValue={(val) => {
           const initialQuantity = val / price;
           const roundedQuantity = Math.round(initialQuantity * 100) / 100;
-          const newTotal = roundedQuantity * price;
-          const roundedTotal = Math.round(newTotal * 100) / 100;
-
-          setEstimatedTotal(roundedTotal);
+          setEstimatedTotal(val);
           setQuantity(roundedQuantity);
         }}
       />
