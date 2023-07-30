@@ -24,6 +24,8 @@ function Game() {
               value: 285.24,
             },
           }}
+          // TODO: add changeSymbol function
+          changeSymbol={(symbol) => console.log(symbol)}
         />
       </div>
       <div className="panel">
@@ -38,10 +40,11 @@ function Chart() {
   return <div>Chart</div>;
 }
 
-function Account({ money, holdings }) {
+function Account({ money, holdings, changeSymbol }) {
   Account.propTypes = {
     money: PropTypes.number.isRequired,
     holdings: PropTypes.objectOf(PropTypes.object).isRequired,
+    changeSymbol: PropTypes.func.isRequired,
   };
 
   return (
@@ -50,7 +53,7 @@ function Account({ money, holdings }) {
         <h1>Account</h1>
         <h1>${money}</h1>
       </div>
-      <Holdings holdings={holdings} />
+      <Holdings holdings={holdings} changeSymbol={changeSymbol} />
       <Trade
         symbol={'SMBL'}
         moneyAvailable={1000}
@@ -61,9 +64,10 @@ function Account({ money, holdings }) {
   );
 }
 
-function Holdings({ holdings }) {
+function Holdings({ holdings, changeSymbol }) {
   Holdings.propTypes = {
     holdings: PropTypes.objectOf(PropTypes.object).isRequired,
+    changeSymbol: PropTypes.func.isRequired,
   };
 
   return (
@@ -78,6 +82,7 @@ function Holdings({ holdings }) {
             symbol={symbol}
             quantity={holdings[symbol].quantity}
             value={holdings[symbol].value}
+            changeSymbol={changeSymbol}
           />
         ))}
       </div>
@@ -86,18 +91,21 @@ function Holdings({ holdings }) {
   );
 }
 
-function Asset({ symbol, quantity, value }) {
+function Asset({ symbol, quantity, value, changeSymbol }) {
   Asset.propTypes = {
     symbol: PropTypes.string.isRequired,
     quantity: PropTypes.number.isRequired,
     value: PropTypes.number.isRequired,
+    changeSymbol: PropTypes.func.isRequired,
   };
 
   // TODO: make symbol clickable
   // TODO: add commas to value
   return (
     <React.Fragment>
-      <p className="symbol">{symbol}</p>
+      <p className="symbol" onClick={() => changeSymbol(symbol)}>
+        {symbol}
+      </p>
       <p className="quantity">{quantity}</p>
       <p className="value">${value}</p>
     </React.Fragment>
