@@ -19,11 +19,13 @@ function Home() {
     let valid = true;
     // check name
     if (!name) {
-      // show name error
+      valid = false;
+      // TODO: show name error
     }
 
     if (!gameId) {
-      // show game id error
+      valid = false;
+      // TODO: show game id error
     }
 
     if (!valid) {

@@ -134,6 +134,7 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
 
   // TODO: add suffix to quantity and total
 
+  // TODO: fix bug with typing in total and it adding a decimal
   return (
     <div className="trade">
       <div className="header">
