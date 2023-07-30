@@ -1,4 +1,4 @@
-import PropTypes, { symbol } from 'prop-types';
+import PropTypes, { func, symbol } from 'prop-types';
 import React, { useEffect } from 'react';
 import TextInput from '../shared/TextInput';
 
@@ -174,6 +174,7 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
           setQuantity(val);
           setEstimatedTotal(Math.round(val * price * 100) / 100);
         }}
+        suffix={() => <p className="max-button">Max</p>}
       />
       <TextInput
         type="number"
@@ -188,7 +189,9 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
           setEstimatedTotal(val);
           setQuantity(roundedQuantity);
         }}
+        suffix={() => <p className="max-button">Max</p>}
       />
+
       <input
         type="range"
         value={quantity}

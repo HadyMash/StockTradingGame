@@ -466,3 +466,12 @@ input[type='number']::-webkit-inner-spin-button {
     rgba(255, 255, 255, 0) 100%
   );
 }
+
+.max-button {
+  color: lightcoral;
+  font-size: 20px;
+}
+
+.max-button:hover {
+  color: red;
+}
