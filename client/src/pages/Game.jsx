@@ -1,6 +1,9 @@
 import PropTypes from 'prop-types';
 import React, { useEffect } from 'react';
+import { Dropdown } from 'rsuite';
+import 'rsuite/dist/rsuite-no-reset.min.css';
 import TextInput from '../shared/TextInput';
+import DividerWithText from '../shared/DividerWithText';
 
 // TODO: see where i can replace state with refs
 
@@ -8,8 +11,12 @@ import TextInput from '../shared/TextInput';
 function Game() {
   return (
     <div className="game-grid">
-      <div className="panel">
-        <Chart />
+      <div className="panel chart">
+        <Chart
+          selectedSymbol="SMBL"
+          symbols={['SMBL', 'MSFT']}
+          setSymbol={(symbol) => console.log(symbol)}
+        />
       </div>
       <div className="panel account">
         <Account
@@ -24,8 +31,8 @@ function Game() {
               value: 285.24,
             },
           }}
-          // TODO: add changeSymbol function
-          changeSymbol={(symbol) => console.log(symbol)}
+          // TODO: add setSymbol function
+          setSymbol={(symbol) => console.log(symbol)}
         />
       </div>
       <div className="panel">
@@ -35,16 +42,43 @@ function Game() {
   );
 }
 
-// TODO: add chart
-function Chart() {
-  return <div>Chart</div>;
+function Chart({ selectedSymbol, symbols, setSymbol }) {
+  Chart.propTypes = {
+    selectedSymbol: PropTypes.string.isRequired,
+    symbols: PropTypes.arrayOf(PropTypes.string).isRequired,
+    setSymbol: PropTypes.func.isRequired,
+  };
+
+  return (
+    <React.Fragment>
+      <div>Chart</div>
+      <div className="dropdown">
+        <Dropdown title={selectedSymbol} activeKey={selectedSymbol}>
+          {symbols.map((symbol) => (
+            <Dropdown.Item
+              key={symbol}
+              eventKey={symbol}
+              onClick={() => setSymbol(symbol)}
+            >
+              {symbol}
+            </Dropdown.Item>
+          ))}
+        </Dropdown>
+        {/* <Dropdown title={selectedSymbol}>
+          {symbols.map((symbol) => (
+            <Dropdown.item key={symbol}>{symbol}</Dropdown.item>
+          ))}
+        </Dropdown> */}
+      </div>
+    </React.Fragment>
+  );
 }
 
-function Account({ money, holdings, changeSymbol }) {
+function Account({ money, holdings, setSymbol }) {
   Account.propTypes = {
     money: PropTypes.number.isRequired,
     holdings: PropTypes.objectOf(PropTypes.object).isRequired,
-    changeSymbol: PropTypes.func.isRequired,
+    setSymbol: PropTypes.func.isRequired,
   };
 
   return (
@@ -53,7 +87,7 @@ function Account({ money, holdings, changeSymbol }) {
         <h1>Account</h1>
         <h1>${money}</h1>
       </div>
-      <Holdings holdings={holdings} changeSymbol={changeSymbol} />
+      <Holdings holdings={holdings} setSymbol={setSymbol} />
       <Trade
         symbol={'SMBL'}
         moneyAvailable={1000}
@@ -64,10 +98,10 @@ function Account({ money, holdings, changeSymbol }) {
   );
 }
 
-function Holdings({ holdings, changeSymbol }) {
+function Holdings({ holdings, setSymbol }) {
   Holdings.propTypes = {
     holdings: PropTypes.objectOf(PropTypes.object).isRequired,
-    changeSymbol: PropTypes.func.isRequired,
+    setSymbol: PropTypes.func.isRequired,
   };
 
   return (
@@ -82,7 +116,7 @@ function Holdings({ holdings, changeSymbol }) {
             symbol={symbol}
             quantity={holdings[symbol].quantity}
             value={holdings[symbol].value}
-            changeSymbol={changeSymbol}
+            setSymbol={setSymbol}
           />
         ))}
       </div>
@@ -91,19 +125,19 @@ function Holdings({ holdings, changeSymbol }) {
   );
 }
 
-function Asset({ symbol, quantity, value, changeSymbol }) {
+function Asset({ symbol, quantity, value, setSymbol }) {
   Asset.propTypes = {
     symbol: PropTypes.string.isRequired,
     quantity: PropTypes.number.isRequired,
     value: PropTypes.number.isRequired,
-    changeSymbol: PropTypes.func.isRequired,
+    setSymbol: PropTypes.func.isRequired,
   };
 
   // TODO: make symbol clickable
   // TODO: add commas to value
   return (
     <React.Fragment>
-      <p className="symbol" onClick={() => changeSymbol(symbol)}>
+      <p className="symbol" onClick={() => setSymbol(symbol)}>
         {symbol}
       </p>
       <p className="quantity">{quantity}</p>
