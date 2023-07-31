@@ -14,7 +14,7 @@ import TextInput from '../shared/TextInput';
 // TODO: make game responsive
 function Game() {
   // ! temp
-  const data = [
+  const [data, setData] = React.useState([
     { id: 1, stock: 'SMBL', price: 100 },
     { id: 2, stock: 'SMBL', price: 101 },
     { id: 3, stock: 'SMBL', price: 80 },
@@ -55,8 +55,7 @@ function Game() {
     { id: 38, stock: 'SMBL', price: 96 },
     { id: 39, stock: 'SMBL', price: 104 },
     { id: 40, stock: 'SMBL', price: 95 },
-    // Add more entries here...
-  ];
+  ]);
 
   return (
     <div className="game-grid">
@@ -147,6 +146,8 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
     });
   }
 
+  // TODO: scroll domain back when new data is added if the user isn't too far off the right
+
   return (
     <React.Fragment>
       <div
@@ -167,7 +168,20 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
             />
           }
         >
-          <VictoryLine data={data} x="id" y="price" />
+          <VictoryLine
+            data={data}
+            x="id"
+            y="price"
+            // TODO: fix scuffed animation
+            animate={{
+              onEnter: {
+                duration: 500,
+                before: () => ({
+                  _y: data[data.length - 2].price || 0,
+                }),
+              },
+            }}
+          />
 
           {/* Show the X-axis */}
           <VictoryAxis label="Day" />
