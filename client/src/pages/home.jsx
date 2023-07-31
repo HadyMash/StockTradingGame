@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
+import { Slider } from 'rsuite';
+import 'rsuite/dist/rsuite-no-reset.min.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 
@@ -189,18 +191,17 @@ function GameSettingSlider({ title, min, max, value, setValue, step }) {
   return (
     <div className="slider-flex">
       <p>{title}:</p>
-      <input
-        type="range"
+      <Slider
+        progress
         min={min}
         max={max}
         step={step}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
-      ></input>
+        onChange={(val) => setValue(val)}
+      />
       <input
         type="number"
         min={min}
-        style={{ width: '5ch' }}
         max={max}
         value={value}
         onChange={(e) => setValue(e.target.value)}

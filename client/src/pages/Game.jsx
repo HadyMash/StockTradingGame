@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useRef } from 'react';
-import { Dropdown } from 'rsuite';
+import { Dropdown, Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import {
   VictoryAxis,
@@ -375,16 +375,16 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
         }}
         suffix={() => <p className="max-button">Max</p>}
       />
-
-      <input
-        type="range"
+      {/* // TODO: style slider */}
+      <Slider
+        progress
         value={quantity}
         min={0}
         max={maxQuantity}
         step={0.01}
-        onChange={(e) => {
-          setQuantity(e.target.value);
-          setEstimatedTotal(Math.round(e.target.value * price * 100) / 100);
+        onChange={(val) => {
+          setQuantity(val);
+          setEstimatedTotal(Math.round(val * price * 100) / 100);
         }}
       />
       <div className="space-around-flex">
@@ -399,9 +399,25 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
 }
 
 function Players() {
+  const [showStartFade, setShowStartFade] = React.useState(false);
+  const [showEndFade, setShowEndFade] = React.useState(true);
+
   return (
     <div className="players-parent">
-      <div className="players">
+      <div
+        className="players"
+        onScroll={(e) => {
+          if (e.target.scrollTop > 0) setShowStartFade(true);
+          else setShowStartFade(false);
+
+          if (
+            e.target.scrollTop <
+            e.target.scrollHeight - e.target.clientHeight
+          )
+            setShowEndFade(true);
+          else setShowEndFade(false);
+        }}
+      >
         <Player
           playerName={'Player 1'}
           playerMoney={1000}
@@ -523,7 +539,8 @@ function Players() {
           prevPlayerMoney={1100}
         />
       </div>
-      <div className="end-fade2"></div>
+      <div className={showStartFade ? 'start-fade2' : undefined}></div>
+      <div className={showEndFade ? 'end-fade2' : undefined}></div>
     </div>
   );
 }
