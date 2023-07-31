@@ -390,8 +390,6 @@ input[type='range']:focus::-ms-fill-upper {
 .trade > .header h2 {
   margin: 0;
 }
-<<<<<<< HEAD
-=======
 
 .tabs button {
   margin: 0 !important;
@@ -493,4 +491,3 @@ input[type='range']:focus::-ms-fill-upper {
 .buy:hover {
   background-color: var(--secondary-color-accent);
 }
->>>>>>> 8851417a9deeb4a8e45e895190edb25952a8ef19
