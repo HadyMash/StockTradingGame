@@ -1,61 +1,13 @@
 import PropTypes from 'prop-types';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Dropdown } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
-import {
-  VictoryChart,
-  VictoryLine,
-  VictoryAxis,
-  VictoryZoomContainer,
-  VictoryBrushContainer,
-} from 'victory';
+import { VictoryChart, VictoryLine, VictoryZoomContainer } from 'victory';
 import TextInput from '../shared/TextInput';
 // TODO: see where i can replace state with refs
 
 // TODO: make game responsive
 function Game() {
-  return (
-    <div className="game-grid">
-      <div className="panel chart">
-        <Chart
-          selectedSymbol="SMBL"
-          symbols={['SMBL', 'MSFT']}
-          setSymbol={(symbol) => console.log(symbol)}
-        />
-      </div>
-      <div className="panel account">
-        <Account
-          money={300}
-          holdings={{
-            SMBL: {
-              quantity: 1,
-              value: 100.12,
-            },
-            MSFT: {
-              quantity: 2,
-              value: 285.24,
-            },
-          }}
-          // TODO: add setSymbol function
-          setSymbol={(symbol) => console.log(symbol)}
-        />
-      </div>
-      <div className="panel">
-        <Players />
-      </div>
-    </div>
-  );
-}
-
-function Chart({ selectedSymbol, symbols, setSymbol }) {
-  Chart.propTypes = {
-    selectedSymbol: PropTypes.string.isRequired,
-    symbols: PropTypes.arrayOf(PropTypes.string).isRequired,
-    setSymbol: PropTypes.func.isRequired,
-  };
-
-  const [domain, setDomain] = React.useState({ x: [0, 20] });
-
   // ! temp
   const data = [
     { id: 1, stock: 'SMBL', price: 100 },
@@ -101,6 +53,69 @@ function Chart({ selectedSymbol, symbols, setSymbol }) {
     // Add more entries here...
   ];
 
+  return (
+    <div className="game-grid">
+      <div className="panel chart">
+        <Chart
+          selectedSymbol="SMBL"
+          symbols={['SMBL', 'MSFT']}
+          setSymbol={(symbol) => console.log(symbol)}
+          data={data}
+        />
+      </div>
+      <div className="panel account">
+        <Account
+          money={300}
+          holdings={{
+            SMBL: {
+              quantity: 1,
+              value: 100.12,
+            },
+            MSFT: {
+              quantity: 2,
+              value: 285.24,
+            },
+          }}
+          // TODO: add setSymbol function
+          setSymbol={(symbol) => console.log(symbol)}
+        />
+      </div>
+      <div className="panel">
+        <Players />
+      </div>
+    </div>
+  );
+}
+
+function Chart({ selectedSymbol, symbols, setSymbol, data }) {
+  Chart.propTypes = {
+    selectedSymbol: PropTypes.string.isRequired,
+    symbols: PropTypes.arrayOf(PropTypes.string).isRequired,
+    setSymbol: PropTypes.func.isRequired,
+    data: PropTypes.arrayOf(PropTypes.object).isRequired,
+  };
+
+  const [domain, setDomain] = React.useState({ x: [0, 20] });
+  const [graphDimensions, setGraphDimensions] = React.useState(null);
+  const graphRef = useRef(null);
+
+  // https://stackoverflow.com/a/68609331/21266350
+  useEffect(() => {
+    // Handler to call on window resize
+    function handleResize() {
+      setGraphDimensions({
+        width: graphRef.current.clientWidth,
+        height: graphRef.current.clientHeight,
+      });
+    }
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    // Call handler right away so state gets updated with initial window size
+    handleResize();
+    // Remove event listener on cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, []); // Empty array ensures that effect is only run on mount
+
   const { maxPrice, minPrice } = data.reduce(
     ({ maxPrice, minPrice }, obj) => ({
       maxPrice: obj.price > maxPrice ? obj.price : maxPrice,
@@ -109,35 +124,39 @@ function Chart({ selectedSymbol, symbols, setSymbol }) {
     { maxPrice: data[0]?.price || null, minPrice: data[0]?.price || null }
   );
 
+  function panGraph(e) {
+    setDomain((currentDomain) => {
+      e.stopPropagation();
+      let delta = (e.deltaY || e.deltaX) * 0.05;
+      if (currentDomain.x[0] + delta < 0) {
+        delta = -currentDomain.x[0];
+      }
+      if (currentDomain.x[1] + delta > data.length) {
+        delta = data.length - currentDomain.x[1] + 2;
+      }
+
+      return {
+        x: [currentDomain.x[0] + delta, currentDomain.x[1] + delta],
+        y: [minPrice, maxPrice],
+      };
+    });
+  }
+
   return (
     <React.Fragment>
       <div
+        ref={graphRef}
         className="graph"
         // TODO: fix issue with trackpad not working great and stuttering
-        onWheelCapture={(e) => {
-          setDomain((currentDomain) => {
-            e.stopPropagation();
-            let delta = (e.deltaY || e.deltaX) * 0.05;
-            if (currentDomain.x[0] + delta < 0) {
-              delta = -currentDomain.x[0];
-            }
-            if (currentDomain.x[1] + delta > data.length) {
-              delta = data.length - currentDomain.x[1] + 2;
-            }
-
-            return {
-              x: [currentDomain.x[0] + delta, currentDomain.x[1] + delta],
-              y: [minPrice - 5, maxPrice + 5],
-            };
-          });
-        }}
+        onWheelCapture={panGraph}
       >
         <VictoryChart
+          width={graphDimensions?.width}
+          height={graphDimensions?.height}
           containerComponent={
             <VictoryZoomContainer
               zoomDimension="x"
               zoomDomain={domain}
-              onZoomDomainChange={(domain) => console.log(domain)}
               allowZoom={false}
             />
           }

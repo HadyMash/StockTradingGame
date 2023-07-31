@@ -14,5 +14,12 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "prettier.singleQuote": true,
   "prettier.tabWidth": 2,
-  "cSpell.words": ["fontawesome", "fortawesome", "SMBL", "STONKS", "TSLA"]
+  "cSpell.words": [
+    "fontawesome",
+    "fortawesome",
+    "rsuite",
+    "SMBL",
+    "STONKS",
+    "TSLA"
+  ]
 }
