@@ -575,3 +575,38 @@ input[type='range']:focus::-ms-fill-upper {
 .max-button:hover {
   color: red;
 }
+
+.chart {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.chart .dropdown {
+  position: absolute;
+  top: 25px;
+  left: 25px;
+}
+
+.chart .dropdown button {
+  font-size: 32px;
+  font-weight: 500;
+  padding: 16px 20px;
+  padding-right: 32px;
+}
+.rs-dropdown .rs-btn > .rs-dropdown-toggle-caret {
+  margin-top: 8px;
+}
+
+.chart .dropdown ul {
+  font-size: 28px;
+}
+
+.chart .graph {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}

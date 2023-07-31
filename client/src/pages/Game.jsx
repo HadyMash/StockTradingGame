@@ -1,15 +1,71 @@
-import PropTypes, { func, symbol } from 'prop-types';
-import React, { useEffect } from 'react';
+import PropTypes from 'prop-types';
+import React, { useEffect, useRef } from 'react';
+import { Dropdown } from 'rsuite';
+import 'rsuite/dist/rsuite-no-reset.min.css';
+import {
+  VictoryAxis,
+  VictoryChart,
+  VictoryLine,
+  VictoryZoomContainer,
+} from 'victory';
 import TextInput from '../shared/TextInput';
-
 // TODO: see where i can replace state with refs
 
 // TODO: make game responsive
 function Game() {
+  // ! temp
+  const [data, setData] = React.useState([
+    { id: 1, stock: 'SMBL', price: 100 },
+    { id: 2, stock: 'SMBL', price: 101 },
+    { id: 3, stock: 'SMBL', price: 80 },
+    { id: 4, stock: 'SMBL', price: 102 },
+    { id: 5, stock: 'SMBL', price: 98 },
+    { id: 6, stock: 'SMBL', price: 103 },
+    { id: 7, stock: 'SMBL', price: 97 },
+    { id: 8, stock: 'SMBL', price: 104 },
+    { id: 9, stock: 'SMBL', price: 96 },
+    { id: 10, stock: 'SMBL', price: 105 },
+    { id: 11, stock: 'SMBL', price: 95 },
+    { id: 12, stock: 'SMBL', price: 106 },
+    { id: 13, stock: 'SMBL', price: 94 },
+    { id: 14, stock: 'SMBL', price: 107 },
+    { id: 15, stock: 'SMBL', price: 93 },
+    { id: 16, stock: 'SMBL', price: 108 },
+    { id: 17, stock: 'SMBL', price: 92 },
+    { id: 18, stock: 'SMBL', price: 109 },
+    { id: 19, stock: 'SMBL', price: 91 },
+    { id: 20, stock: 'SMBL', price: 110 },
+    { id: 21, stock: 'SMBL', price: 105 },
+    { id: 22, stock: 'SMBL', price: 102 },
+    { id: 23, stock: 'SMBL', price: 95 },
+    { id: 24, stock: 'SMBL', price: 98 },
+    { id: 25, stock: 'SMBL', price: 100 },
+    { id: 26, stock: 'SMBL', price: 103 },
+    { id: 27, stock: 'SMBL', price: 110 },
+    { id: 28, stock: 'SMBL', price: 101 },
+    { id: 29, stock: 'SMBL', price: 96 },
+    { id: 30, stock: 'SMBL', price: 108 },
+    { id: 31, stock: 'SMBL', price: 94 },
+    { id: 32, stock: 'SMBL', price: 97 },
+    { id: 33, stock: 'SMBL', price: 109 },
+    { id: 34, stock: 'SMBL', price: 92 },
+    { id: 35, stock: 'SMBL', price: 103 },
+    { id: 36, stock: 'SMBL', price: 101 },
+    { id: 37, stock: 'SMBL', price: 99 },
+    { id: 38, stock: 'SMBL', price: 96 },
+    { id: 39, stock: 'SMBL', price: 104 },
+    { id: 40, stock: 'SMBL', price: 95 },
+  ]);
+
   return (
     <div className="game-grid">
-      <div className="panel">
-        <Chart />
+      <div className="panel chart">
+        <Chart
+          selectedSymbol="SMBL"
+          symbols={['SMBL', 'MSFT']}
+          setSymbol={(symbol) => console.log(symbol)}
+          data={data}
+        />
       </div>
       <div className="panel account">
         <Account
@@ -24,8 +80,8 @@ function Game() {
               value: 285.24,
             },
           }}
-          // TODO: add changeSymbol function
-          changeSymbol={(symbol) => console.log(symbol)}
+          // TODO: add setSymbol function
+          setSymbol={(symbol) => console.log(symbol)}
         />
       </div>
       <div className="panel">
@@ -35,16 +91,144 @@ function Game() {
   );
 }
 
-// TODO: add chart
-function Chart() {
-  return <div>Chart</div>;
+function Chart({ selectedSymbol, symbols, setSymbol, data }) {
+  Chart.propTypes = {
+    selectedSymbol: PropTypes.string.isRequired,
+    symbols: PropTypes.arrayOf(PropTypes.string).isRequired,
+    setSymbol: PropTypes.func.isRequired,
+    data: PropTypes.arrayOf(PropTypes.object).isRequired,
+  };
+
+  const [domain, setDomain] = React.useState({ x: [0, 20] });
+  const [graphDimensions, setGraphDimensions] = React.useState(null);
+  const graphRef = useRef(null);
+
+  // https://stackoverflow.com/a/68609331/21266350
+  useEffect(() => {
+    // Handler to call on window resize
+    function handleResize() {
+      setGraphDimensions({
+        width: graphRef.current.clientWidth,
+        height: graphRef.current.clientHeight,
+      });
+    }
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    // Call handler right away so state gets updated with initial window size
+    handleResize();
+    // Remove event listener on cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, []); // Empty array ensures that effect is only run on mount
+
+  const { maxPrice, minPrice } = data.reduce(
+    ({ maxPrice, minPrice }, obj) => ({
+      maxPrice: obj.price > maxPrice ? obj.price : maxPrice,
+      minPrice: obj.price < minPrice ? obj.price : minPrice,
+    }),
+    { maxPrice: data[0]?.price || null, minPrice: data[0]?.price || null }
+  );
+
+  function panGraph(e) {
+    setDomain((currentDomain) => {
+      e.stopPropagation();
+      let delta = (e.deltaY || e.deltaX) * 0.05;
+      if (currentDomain.x[0] + delta < 0) {
+        delta = -currentDomain.x[0];
+      }
+      if (currentDomain.x[1] + delta > data.length) {
+        delta = data.length - currentDomain.x[1] + 2;
+      }
+
+      return {
+        x: [currentDomain.x[0] + delta, currentDomain.x[1] + delta],
+        y: [minPrice, maxPrice],
+      };
+    });
+  }
+
+  // TODO: scroll domain back when new data is added if the user isn't too far off the right
+
+  return (
+    <React.Fragment>
+      <div
+        ref={graphRef}
+        className="graph"
+        // TODO: fix issue with trackpad not working great and stuttering
+        onWheelCapture={panGraph}
+      >
+        {/* // TODO: style graph */}
+        <VictoryChart
+          width={graphDimensions?.width}
+          height={graphDimensions?.height}
+          containerComponent={
+            <VictoryZoomContainer
+              zoomDimension="x"
+              zoomDomain={domain}
+              allowZoom={false}
+            />
+          }
+        >
+          <VictoryLine
+            data={data}
+            x="id"
+            y="price"
+            // TODO: fix scuffed animation
+            animate={{
+              onEnter: {
+                duration: 500,
+                before: () => ({
+                  _y: data[data.length - 2].price || 0,
+                }),
+              },
+            }}
+          />
+
+          {/* Show the X-axis */}
+          <VictoryAxis label="Day" />
+
+          {/* Move the Y-axis to the right */}
+          <VictoryAxis
+            dependentAxis
+            label="Price"
+            orientation="right"
+            tickFormat={(x) => `$${x}`}
+            style={{
+              grid: {
+                fill: 'none',
+                stroke: 'grey',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+                strokeDasharray: '10, 5',
+                strokeWidth: 0.5,
+                pointerEvents: 'painted',
+              },
+            }}
+          />
+        </VictoryChart>
+      </div>
+      <div className="dropdown">
+        {/* // TODO: make caret bigger */}
+        <Dropdown title={selectedSymbol} activeKey={selectedSymbol} size="lg">
+          {symbols.map((symbol) => (
+            <Dropdown.Item
+              key={symbol}
+              eventKey={symbol}
+              onClick={() => setSymbol(symbol)}
+            >
+              {symbol}
+            </Dropdown.Item>
+          ))}
+        </Dropdown>
+      </div>
+    </React.Fragment>
+  );
 }
 
-function Account({ money, holdings, changeSymbol }) {
+function Account({ money, holdings, setSymbol }) {
   Account.propTypes = {
     money: PropTypes.number.isRequired,
     holdings: PropTypes.objectOf(PropTypes.object).isRequired,
-    changeSymbol: PropTypes.func.isRequired,
+    setSymbol: PropTypes.func.isRequired,
   };
 
   return (
@@ -53,7 +237,7 @@ function Account({ money, holdings, changeSymbol }) {
         <h1>Account</h1>
         <h1>${money}</h1>
       </div>
-      <Holdings holdings={holdings} changeSymbol={changeSymbol} />
+      <Holdings holdings={holdings} setSymbol={setSymbol} />
       <Trade
         symbol={'SMBL'}
         moneyAvailable={1000}
@@ -64,10 +248,10 @@ function Account({ money, holdings, changeSymbol }) {
   );
 }
 
-function Holdings({ holdings, changeSymbol }) {
+function Holdings({ holdings, setSymbol }) {
   Holdings.propTypes = {
     holdings: PropTypes.objectOf(PropTypes.object).isRequired,
-    changeSymbol: PropTypes.func.isRequired,
+    setSymbol: PropTypes.func.isRequired,
   };
 
   return (
@@ -82,7 +266,7 @@ function Holdings({ holdings, changeSymbol }) {
             symbol={symbol}
             quantity={holdings[symbol].quantity}
             value={holdings[symbol].value}
-            changeSymbol={changeSymbol}
+            setSymbol={setSymbol}
           />
         ))}
       </div>
@@ -91,19 +275,19 @@ function Holdings({ holdings, changeSymbol }) {
   );
 }
 
-function Asset({ symbol, quantity, value, changeSymbol }) {
+function Asset({ symbol, quantity, value, setSymbol }) {
   Asset.propTypes = {
     symbol: PropTypes.string.isRequired,
     quantity: PropTypes.number.isRequired,
     value: PropTypes.number.isRequired,
-    changeSymbol: PropTypes.func.isRequired,
+    setSymbol: PropTypes.func.isRequired,
   };
 
   // TODO: make symbol clickable
   // TODO: add commas to value
   return (
     <React.Fragment>
-      <p className="symbol" onClick={() => changeSymbol(symbol)}>
+      <p className="symbol" onClick={() => setSymbol(symbol)}>
         {symbol}
       </p>
       <p className="quantity">{quantity}</p>
@@ -352,17 +536,17 @@ function Player({ playerName, playerMoney, prevPlayerMoney }) {
   };
   let symbol;
   if (playerMoney > prevPlayerMoney) {
-    symbol = <i class="arrow-up"></i>;
+    symbol = <i className="arrow-up"></i>;
   } else if (playerMoney < prevPlayerMoney) {
-    symbol = <i class="arrow-down"></i>;
+    symbol = <i className="arrow-down"></i>;
   } else {
     symbol = '';
   }
   return (
     <div>
-      <span class="circle"></span>
-      <span class="player-name">{playerName}</span>
-      <span class="player-money">
+      <span className="circle"></span>
+      <span className="player-name">{playerName}</span>
+      <span className="player-money">
         {symbol}${playerMoney}
       </span>
     </div>
