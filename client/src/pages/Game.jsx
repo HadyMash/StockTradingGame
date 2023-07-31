@@ -173,14 +173,14 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
             x="id"
             y="price"
             // TODO: fix scuffed animation
-            animate={{
-              onEnter: {
-                duration: 500,
-                before: () => ({
-                  _y: data[data.length - 2].price || 0,
-                }),
-              },
-            }}
+            // animate={{
+            //   onEnter: {
+            //     duration: 500,
+            //     before: () => ({
+            //       _y: data[data.length - 2].price || 0,
+            //     }),
+            //   },
+            // }}
           />
 
           {/* Show the X-axis */}
