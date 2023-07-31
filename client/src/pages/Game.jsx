@@ -6,7 +6,6 @@ import {
   VictoryAxis,
   VictoryChart,
   VictoryLine,
-  VictoryTheme,
   VictoryZoomContainer,
 } from 'victory';
 import TextInput from '../shared/TextInput';
@@ -194,7 +193,8 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
         </VictoryChart>
       </div>
       <div className="dropdown">
-        <Dropdown title={selectedSymbol} activeKey={selectedSymbol}>
+        {/* // TODO: make caret bigger */}
+        <Dropdown title={selectedSymbol} activeKey={selectedSymbol} size="lg">
           {symbols.map((symbol) => (
             <Dropdown.Item
               key={symbol}

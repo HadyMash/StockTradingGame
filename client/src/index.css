@@ -402,11 +402,17 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 .chart .dropdown button {
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 500;
+  padding: 16px 20px;
+  padding-right: 32px;
 }
+.rs-dropdown .rs-btn > .rs-dropdown-toggle-caret {
+  margin-top: 8px;
+}
+
 .chart .dropdown ul {
-  font-size: 20px;
+  font-size: 28px;
 }
 
 .chart .graph {
