@@ -358,6 +358,7 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
           setQuantity(val);
           setEstimatedTotal(Math.round(val * price * 100) / 100);
         }}
+        suffix={() => <p className="max-button">Max</p>}
       />
       <TextInput
         type="number"
@@ -372,7 +373,9 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
           setEstimatedTotal(val);
           setQuantity(roundedQuantity);
         }}
+        suffix={() => <p className="max-button">Max</p>}
       />
+
       <input
         type="range"
         value={quantity}
@@ -397,14 +400,157 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
 
 function Players() {
   return (
-    <div>
-      <Player />
+    <div className="players-parent">
+      <div className="players">
+        <Player
+          playerName={'Player 1'}
+          playerMoney={1000}
+          prevPlayerMoney={100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+        <Player
+          playerName={'Player 2'}
+          playerMoney={1000}
+          prevPlayerMoney={1100}
+        />
+      </div>
+      <div className="end-fade2"></div>
     </div>
   );
 }
 
-function Player() {
-  return <div>Player</div>;
+function Player({ playerName, playerMoney, prevPlayerMoney }) {
+  Player.propTypes = {
+    playerName: PropTypes.string.isRequired,
+    playerMoney: PropTypes.number.isRequired,
+    prevPlayerMoney: PropTypes.number.isRequired,
+  };
+  let symbol;
+  if (playerMoney > prevPlayerMoney) {
+    symbol = <i className="arrow-up"></i>;
+  } else if (playerMoney < prevPlayerMoney) {
+    symbol = <i className="arrow-down"></i>;
+  } else {
+    symbol = '';
+  }
+  return (
+    <div>
+      <span className="circle"></span>
+      <span className="player-name">{playerName}</span>
+      <span className="player-money">
+        {symbol}${playerMoney}
+      </span>
+    </div>
+  );
 }
 
 export default Game;
