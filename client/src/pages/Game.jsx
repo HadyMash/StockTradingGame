@@ -6,6 +6,7 @@ import {
   VictoryAxis,
   VictoryChart,
   VictoryLine,
+  VictoryTheme,
   VictoryZoomContainer,
 } from 'victory';
 import TextInput from '../shared/TextInput';
@@ -178,6 +179,17 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
             label="Price"
             orientation="right"
             tickFormat={(x) => `$${x}`}
+            style={{
+              grid: {
+                fill: 'none',
+                stroke: 'grey',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+                strokeDasharray: '10, 5',
+                strokeWidth: 0.5,
+                pointerEvents: 'painted',
+              },
+            }}
           />
         </VictoryChart>
       </div>
