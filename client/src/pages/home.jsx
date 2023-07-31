@@ -7,7 +7,7 @@ import DividerWithText from '../shared/DividerWithText';
 
 function Home() {
   const [showCreateGame, setShowCreateGame] = useState(false);
-  // TODO: check if i can remove the name state
+  // TODO: replace name state with a ref
   const [name, setName] = useState('');
   const [gameId, setGameId] = useState('');
   const [maxRounds, setMaxRounds] = useState(20);
@@ -23,11 +23,13 @@ function Home() {
     let valid = true;
     // check name
     if (!name) {
-      // show name error
+      valid = false;
+      // TODO: show name error
     }
 
     if (!gameId) {
-      // show game id error
+      valid = false;
+      // TODO: show game id error
     }
 
     if (!valid) {
