@@ -2,7 +2,12 @@ import PropTypes from 'prop-types';
 import React, { useEffect, useRef } from 'react';
 import { Dropdown } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
-import { VictoryChart, VictoryLine, VictoryZoomContainer } from 'victory';
+import {
+  VictoryAxis,
+  VictoryChart,
+  VictoryLine,
+  VictoryZoomContainer,
+} from 'victory';
 import TextInput from '../shared/TextInput';
 // TODO: see where i can replace state with refs
 
@@ -150,6 +155,7 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
         // TODO: fix issue with trackpad not working great and stuttering
         onWheelCapture={panGraph}
       >
+        {/* // TODO: style graph */}
         <VictoryChart
           width={graphDimensions?.width}
           height={graphDimensions?.height}
@@ -162,6 +168,17 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
           }
         >
           <VictoryLine data={data} x="id" y="price" />
+
+          {/* Show the X-axis */}
+          <VictoryAxis label="Day" />
+
+          {/* Move the Y-axis to the right */}
+          <VictoryAxis
+            dependentAxis
+            label="Price"
+            orientation="right"
+            tickFormat={(x) => `$${x}`}
+          />
         </VictoryChart>
       </div>
       <div className="dropdown">
