@@ -16,7 +16,8 @@
     "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "rsuite": "^5.37.2"
+    "rsuite": "^5.37.2",
+    "victory": "^36.6.11"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
@@ -26,8 +27,6 @@
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
-    "sass": "^1.64.1",
-    "sass-loader": "^13.3.2",
     "vite": "^4.4.5"
   }
 }

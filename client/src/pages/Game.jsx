@@ -2,9 +2,14 @@ import PropTypes from 'prop-types';
 import React, { useEffect } from 'react';
 import { Dropdown } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
+import {
+  VictoryChart,
+  VictoryLine,
+  VictoryAxis,
+  VictoryZoomContainer,
+  VictoryBrushContainer,
+} from 'victory';
 import TextInput from '../shared/TextInput';
-import DividerWithText from '../shared/DividerWithText';
-
 // TODO: see where i can replace state with refs
 
 // TODO: make game responsive
@@ -49,9 +54,97 @@ function Chart({ selectedSymbol, symbols, setSymbol }) {
     setSymbol: PropTypes.func.isRequired,
   };
 
+  const [domain, setDomain] = React.useState({ x: [0, 20] });
+
+  // ! temp
+  const data = [
+    { id: 1, stock: 'SMBL', price: 100 },
+    { id: 2, stock: 'SMBL', price: 101 },
+    { id: 3, stock: 'SMBL', price: 80 },
+    { id: 4, stock: 'SMBL', price: 102 },
+    { id: 5, stock: 'SMBL', price: 98 },
+    { id: 6, stock: 'SMBL', price: 103 },
+    { id: 7, stock: 'SMBL', price: 97 },
+    { id: 8, stock: 'SMBL', price: 104 },
+    { id: 9, stock: 'SMBL', price: 96 },
+    { id: 10, stock: 'SMBL', price: 105 },
+    { id: 11, stock: 'SMBL', price: 95 },
+    { id: 12, stock: 'SMBL', price: 106 },
+    { id: 13, stock: 'SMBL', price: 94 },
+    { id: 14, stock: 'SMBL', price: 107 },
+    { id: 15, stock: 'SMBL', price: 93 },
+    { id: 16, stock: 'SMBL', price: 108 },
+    { id: 17, stock: 'SMBL', price: 92 },
+    { id: 18, stock: 'SMBL', price: 109 },
+    { id: 19, stock: 'SMBL', price: 91 },
+    { id: 20, stock: 'SMBL', price: 110 },
+    { id: 21, stock: 'SMBL', price: 105 },
+    { id: 22, stock: 'SMBL', price: 102 },
+    { id: 23, stock: 'SMBL', price: 95 },
+    { id: 24, stock: 'SMBL', price: 98 },
+    { id: 25, stock: 'SMBL', price: 100 },
+    { id: 26, stock: 'SMBL', price: 103 },
+    { id: 27, stock: 'SMBL', price: 110 },
+    { id: 28, stock: 'SMBL', price: 101 },
+    { id: 29, stock: 'SMBL', price: 96 },
+    { id: 30, stock: 'SMBL', price: 108 },
+    { id: 31, stock: 'SMBL', price: 94 },
+    { id: 32, stock: 'SMBL', price: 97 },
+    { id: 33, stock: 'SMBL', price: 109 },
+    { id: 34, stock: 'SMBL', price: 92 },
+    { id: 35, stock: 'SMBL', price: 103 },
+    { id: 36, stock: 'SMBL', price: 101 },
+    { id: 37, stock: 'SMBL', price: 99 },
+    { id: 38, stock: 'SMBL', price: 96 },
+    { id: 39, stock: 'SMBL', price: 104 },
+    { id: 40, stock: 'SMBL', price: 95 },
+    // Add more entries here...
+  ];
+
+  const { maxPrice, minPrice } = data.reduce(
+    ({ maxPrice, minPrice }, obj) => ({
+      maxPrice: obj.price > maxPrice ? obj.price : maxPrice,
+      minPrice: obj.price < minPrice ? obj.price : minPrice,
+    }),
+    { maxPrice: data[0]?.price || null, minPrice: data[0]?.price || null }
+  );
+
   return (
     <React.Fragment>
-      <div>Chart</div>
+      <div
+        className="graph"
+        // TODO: fix issue with trackpad not working great and stuttering
+        onWheelCapture={(e) => {
+          setDomain((currentDomain) => {
+            e.stopPropagation();
+            let delta = (e.deltaY || e.deltaX) * 0.05;
+            if (currentDomain.x[0] + delta < 0) {
+              delta = -currentDomain.x[0];
+            }
+            if (currentDomain.x[1] + delta > data.length) {
+              delta = data.length - currentDomain.x[1] + 2;
+            }
+
+            return {
+              x: [currentDomain.x[0] + delta, currentDomain.x[1] + delta],
+              y: [minPrice - 5, maxPrice + 5],
+            };
+          });
+        }}
+      >
+        <VictoryChart
+          containerComponent={
+            <VictoryZoomContainer
+              zoomDimension="x"
+              zoomDomain={domain}
+              onZoomDomainChange={(domain) => console.log(domain)}
+              allowZoom={false}
+            />
+          }
+        >
+          <VictoryLine data={data} x="id" y="price" />
+        </VictoryChart>
+      </div>
       <div className="dropdown">
         <Dropdown title={selectedSymbol} activeKey={selectedSymbol}>
           {symbols.map((symbol) => (
@@ -64,11 +157,6 @@ function Chart({ selectedSymbol, symbols, setSymbol }) {
             </Dropdown.Item>
           ))}
         </Dropdown>
-        {/* <Dropdown title={selectedSymbol}>
-          {symbols.map((symbol) => (
-            <Dropdown.item key={symbol}>{symbol}</Dropdown.item>
-          ))}
-        </Dropdown> */}
       </div>
     </React.Fragment>
   );
