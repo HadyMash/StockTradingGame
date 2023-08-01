@@ -187,12 +187,11 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
           />
 
           {/* Show the X-axis */}
-          <VictoryAxis label="Day" />
+          <VictoryAxis />
 
           {/* Move the Y-axis to the right */}
           <VictoryAxis
             dependentAxis
-            label="Price"
             orientation="right"
             tickFormat={(x) => `$${x}`}
             style={{
