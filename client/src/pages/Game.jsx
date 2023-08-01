@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
-import React, { useEffect, useRef } from 'react';
-import { Dropdown, Slider } from 'rsuite';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Dropdown, Slider, Avatar } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import {
   VictoryAxis,
@@ -8,7 +8,11 @@ import {
   VictoryLine,
   VictoryZoomContainer,
 } from 'victory';
+import { createAvatar } from '@dicebear/core';
+import { thumbs } from '@dicebear/collection';
 import TextInput from '../shared/TextInput';
+import { Minus, ArrowDownLine, ArrowUpLine } from '@rsuite/icons';
+
 // TODO: see where i can replace state with refs
 
 // TODO: make game responsive
@@ -429,9 +433,9 @@ function Players() {
           prevPlayerMoney={1100}
         />
         <Player
-          playerName={'Player 2'}
+          playerName={'Player 3'}
           playerMoney={1000}
-          prevPlayerMoney={1100}
+          prevPlayerMoney={1000}
         />
         <Player
           playerName={'Player 2'}
@@ -551,20 +555,29 @@ function Player({ playerName, playerMoney, prevPlayerMoney }) {
     playerMoney: PropTypes.number.isRequired,
     prevPlayerMoney: PropTypes.number.isRequired,
   };
-  let symbol;
-  if (playerMoney > prevPlayerMoney) {
-    symbol = <i className="arrow-up"></i>;
-  } else if (playerMoney < prevPlayerMoney) {
-    symbol = <i className="arrow-down"></i>;
-  } else {
-    symbol = '';
-  }
+
+  const avatar = useMemo(() => {
+    return createAvatar(thumbs, {
+      size: 60,
+      seed: playerName,
+    }).toDataUriSync();
+  }, [playerName]);
+
   return (
-    <div>
-      <span className="circle"></span>
+    <div className="player">
+      <Avatar size="lg">
+        <img src={avatar}></img>
+      </Avatar>
       <span className="player-name">{playerName}</span>
       <span className="player-money">
-        {symbol}${playerMoney}
+        {playerMoney > prevPlayerMoney ? (
+          <ArrowUpLine color="green" style={{ fontSize: '22px' }} />
+        ) : playerMoney == prevPlayerMoney ? (
+          <Minus color="orange" style={{ fontSize: '22px' }} />
+        ) : (
+          <ArrowDownLine color="red" style={{ fontSize: '22px' }} />
+        )}
+        ${playerMoney}
       </span>
     </div>
   );
