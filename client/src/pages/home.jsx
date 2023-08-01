@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
+import { useNavigate } from 'react-router-dom';
 import { Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import { ArrowLeftLine } from '@rsuite/icons';
 
 import DividerWithText from '../shared/DividerWithText';
 
+// TODO: store user id in local storage or session storage or cookie
 function Home() {
   const [showCreateGame, setShowCreateGame] = useState(false);
   // TODO: replace name state with a ref
@@ -16,6 +18,8 @@ function Home() {
   const [startingMoney, setStartingMoney] = useState(500);
   const [targetMoney, setTargetMoney] = useState(1.5);
   const [maxPlayers, setMaxPlayers] = useState(5);
+
+  const navigate = useNavigate();
 
   function handleJoinGame() {
     // ! temp
@@ -38,12 +42,16 @@ function Home() {
     }
     // TODO: send request
     // TODO: handle response
+
+    // ! temp
+    navigate('/lobby');
   }
 
   function handleCreateGame() {
     if (showCreateGame) {
       // ! temp
       console.log('createGameRequest');
+      navigate('/lobby');
     } else {
       setShowCreateGame(true);
     }
@@ -97,6 +105,7 @@ function JoinGame({ gameId, setGameId, handleJoinGame }) {
 
   return (
     <React.Fragment>
+      {/* // TODO: allow only characters (no spaces and numbers) */}
       <input
         type="text"
         placeholder="Game ID"

@@ -14,7 +14,8 @@ import { Minus, ArrowDownLine, ArrowUpLine } from '@rsuite/icons';
 
 // TODO: see where i can replace state with refs
 
-// TODO: make game responsive
+// TODO: get code from memory router params and url as fallback
+// TODO: make game page responsive
 function Game() {
   // ! temp
   const [data, setData] = React.useState([
