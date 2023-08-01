@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Dropdown, Slider, Avatar } from 'rsuite';
+import React, { useEffect, useRef } from 'react';
+import { Dropdown, Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import {
   VictoryAxis,
@@ -8,9 +8,8 @@ import {
   VictoryLine,
   VictoryZoomContainer,
 } from 'victory';
-import { createAvatar } from '@dicebear/core';
-import { thumbs } from '@dicebear/collection';
 import TextInput from '../shared/TextInput';
+import PlayerAvatar from '../shared/PlayerAvatar';
 import { Minus, ArrowDownLine, ArrowUpLine } from '@rsuite/icons';
 
 // TODO: see where i can replace state with refs
@@ -556,18 +555,9 @@ function Player({ playerName, playerMoney, prevPlayerMoney }) {
     prevPlayerMoney: PropTypes.number.isRequired,
   };
 
-  const avatar = useMemo(() => {
-    return createAvatar(thumbs, {
-      size: 60,
-      seed: playerName,
-    }).toDataUriSync();
-  }, [playerName]);
-
   return (
     <div className="player">
-      <Avatar size="lg">
-        <img src={avatar}></img>
-      </Avatar>
+      <PlayerAvatar playerName={playerName} />
       <span className="player-name">{playerName}</span>
       <span className="player-money">
         {playerMoney > prevPlayerMoney ? (
