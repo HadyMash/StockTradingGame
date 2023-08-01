@@ -85,19 +85,23 @@ function Home() {
           />
         ) : (
           <JoinGame
+            name={name}
             gameId={gameId}
             setGameId={setGameId}
             handleJoinGame={handleJoinGame}
           />
         )}
-        <button onClick={handleCreateGame}>Create Game</button>
+        <button onClick={handleCreateGame} disabled={showCreateGame && !name}>
+          Create Game
+        </button>
       </div>
     </div>
   );
 }
 
-function JoinGame({ gameId, setGameId, handleJoinGame }) {
+function JoinGame({ name, gameId, setGameId, handleJoinGame }) {
   JoinGame.propTypes = {
+    name: PropTypes.string.isRequired,
     gameId: PropTypes.string.isRequired,
     setGameId: PropTypes.func.isRequired,
     handleJoinGame: PropTypes.func.isRequired,
@@ -112,7 +116,9 @@ function JoinGame({ gameId, setGameId, handleJoinGame }) {
         value={gameId}
         onChange={(e) => setGameId(e.target.value.toUpperCase())}
       />
-      <button onClick={handleJoinGame}>Join Game</button>
+      <button onClick={handleJoinGame} disabled={!name || !gameId}>
+        Join Game
+      </button>
       <DividerWithText>or</DividerWithText>
     </React.Fragment>
   );
