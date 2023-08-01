@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
+import { ArrowLeftLine } from '@rsuite/icons';
 
 import DividerWithText from '../shared/DividerWithText';
 
@@ -218,8 +217,7 @@ function GoBack({ setShowCreateGame }) {
   return (
     // TODO: format button properly
     <button className="go-back" onClick={() => setShowCreateGame(false)}>
-      <FontAwesomeIcon icon={faChevronLeft} />
-      <div style={{ width: '10px' }}></div>
+      <ArrowLeftLine style={{ fontSize: '22px' }} />
       <p style={{ fontSize: '16px' }}>Go Back</p>
     </button>
   );

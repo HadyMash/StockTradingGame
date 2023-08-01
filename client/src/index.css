@@ -68,6 +68,14 @@ input[type='number']::-webkit-inner-spin-button {
   display: flex;
   width: 150px;
 }
+
+.container .go-back {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 20px;
+}
+
 .container .go-back * {
   margin: 1.5px;
 }
@@ -103,9 +111,13 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 .container * {
-  /* vertical horizontal */
+  /* vertical | horizontal */
   margin: 10px 0;
   font-size: 16px;
+}
+
+.container .slider-flex * {
+  margin: 5px 0;
 }
 
 .container input[type='text'] {
@@ -117,9 +129,6 @@ input[type='number']::-webkit-inner-spin-button {
   border-radius: var(--border-radius);
   background-color: white;
   transition: background-color 0.2s ease;
-  box-shadow: 1px 1px 1px #000000;
-  border-radius: 5px;
-  border: 1px solid #000000;
 }
 
 .container input[type='text']:hover {
@@ -142,9 +151,6 @@ input[type='number']::-webkit-inner-spin-button {
   border-radius: var(--border-radius);
   text-align: center;
   transition: background-color 0.1s ease;
-  box-shadow: 1px 1px 1px #000000;
-  border-radius: 5px;
-  border: 1px solid #000000;
 }
 .container button:hover {
   background-color: var(--secondary-color-accent);
@@ -263,9 +269,6 @@ input[type='range']:focus::-ms-fill-upper {
   background-color: white;
   border: none;
   border-radius: var(--border-radius);
-  box-shadow: 1px 1px 1px #000000;
-  border-radius: 5px;
-  border: 1px solid #000000;
   width: 6ch;
 }
 
