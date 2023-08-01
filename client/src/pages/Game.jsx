@@ -562,7 +562,10 @@ function Player({ playerName, playerMoney, prevPlayerMoney }) {
         {playerMoney > prevPlayerMoney ? (
           <ArrowUpLine color="green" style={{ fontSize: '22px' }} />
         ) : playerMoney == prevPlayerMoney ? (
-          <Minus color="orange" style={{ fontSize: '22px' }} />
+          <Minus
+            color="orange"
+            style={{ fontSize: '18px', marginRight: '5px' }}
+          />
         ) : (
           <ArrowDownLine color="red" style={{ fontSize: '22px' }} />
         )}
