@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
+import { useNavigate } from 'react-router-dom';
+import { Slider } from 'rsuite';
+import 'rsuite/dist/rsuite-no-reset.min.css';
+import { ArrowLeftLine } from '@rsuite/icons';
 
 import DividerWithText from '../shared/DividerWithText';
 
+// TODO: store user id in local storage or session storage or cookie
 function Home() {
   const [showCreateGame, setShowCreateGame] = useState(false);
   // TODO: replace name state with a ref
@@ -15,6 +18,8 @@ function Home() {
   const [startingMoney, setStartingMoney] = useState(500);
   const [targetMoney, setTargetMoney] = useState(1.5);
   const [maxPlayers, setMaxPlayers] = useState(5);
+
+  const navigate = useNavigate();
 
   function handleJoinGame() {
     // ! temp
@@ -37,12 +42,16 @@ function Home() {
     }
     // TODO: send request
     // TODO: handle response
+
+    // ! temp
+    navigate('/lobby');
   }
 
   function handleCreateGame() {
     if (showCreateGame) {
       // ! temp
       console.log('createGameRequest');
+      navigate('/lobby');
     } else {
       setShowCreateGame(true);
     }
@@ -76,19 +85,23 @@ function Home() {
           />
         ) : (
           <JoinGame
+            name={name}
             gameId={gameId}
             setGameId={setGameId}
             handleJoinGame={handleJoinGame}
           />
         )}
-        <button onClick={handleCreateGame}>Create Game</button>
+        <button onClick={handleCreateGame} disabled={showCreateGame && !name}>
+          Create Game
+        </button>
       </div>
     </div>
   );
 }
 
-function JoinGame({ gameId, setGameId, handleJoinGame }) {
+function JoinGame({ name, gameId, setGameId, handleJoinGame }) {
   JoinGame.propTypes = {
+    name: PropTypes.string.isRequired,
     gameId: PropTypes.string.isRequired,
     setGameId: PropTypes.func.isRequired,
     handleJoinGame: PropTypes.func.isRequired,
@@ -96,13 +109,16 @@ function JoinGame({ gameId, setGameId, handleJoinGame }) {
 
   return (
     <React.Fragment>
+      {/* // TODO: allow only characters (no spaces and numbers) */}
       <input
         type="text"
         placeholder="Game ID"
         value={gameId}
         onChange={(e) => setGameId(e.target.value.toUpperCase())}
       />
-      <button onClick={handleJoinGame}>Join Game</button>
+      <button onClick={handleJoinGame} disabled={!name || !gameId}>
+        Join Game
+      </button>
       <DividerWithText>or</DividerWithText>
     </React.Fragment>
   );
@@ -189,18 +205,17 @@ function GameSettingSlider({ title, min, max, value, setValue, step }) {
   return (
     <div className="slider-flex">
       <p>{title}:</p>
-      <input
-        type="range"
+      <Slider
+        progress
         min={min}
         max={max}
         step={step}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
-      ></input>
+        onChange={(val) => setValue(val)}
+      />
       <input
         type="number"
         min={min}
-        style={{ width: '5ch' }}
         max={max}
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -217,8 +232,7 @@ function GoBack({ setShowCreateGame }) {
   return (
     // TODO: format button properly
     <button className="go-back" onClick={() => setShowCreateGame(false)}>
-      <FontAwesomeIcon icon={faChevronLeft} />
-      <div style={{ width: '10px' }}></div>
+      <ArrowLeftLine style={{ fontSize: '22px' }} />
       <p style={{ fontSize: '16px' }}>Go Back</p>
     </button>
   );
