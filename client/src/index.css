@@ -523,7 +523,7 @@ input[type='range']:focus::-ms-fill-upper {
 }
 
 .players .player * {
-  margin: 5px 0;
+  margin: 2px 0;
 }
 
 .players-parent {
