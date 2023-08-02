@@ -617,3 +617,125 @@ input[type='range']:focus::-ms-fill-upper {
   width: 100%;
   height: 100%;
 }
+
+/* LOBBY STYLE */
+
+.lobby {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* Lobby title style */
+.lobby h1 {
+  margin-top: 50px;
+  width: 200px;
+  height: 0px;
+  flex-shrink: 0;
+  color: #000;
+  font-family: Inter;
+  font-size: 100px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  text-align: center;
+}
+
+.lobby .names {
+  height: 100%;
+  flex-grow: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-gap: 50px;
+  place-items: center;
+  width: min-content;
+  justify-items: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  /* position: absolute;
+  left: 0%;
+  right: 0%; */
+}
+
+.lobby .start-game {
+  margin-bottom: 50px;
+}
+
+.leave-button {
+  font-size: 1.2em;
+  background-color: #f00;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  padding: 0.3em;
+  cursor: pointer;
+}
+
+.leave-button:hover {
+  background-color: #c00;
+}
+
+.leave {
+  width: 150px;
+  height: 40px;
+  margin: 4px 2px;
+  line-height: normal;
+  font-weight: 700;
+  font-size: 20px;
+  padding: 16px 20px;
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  text-align: center;
+  display: inline-block;
+  padding-block: initial;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+.leave:hover {
+  background-color: var(--secondary-color-accent);
+  cursor: pointer;
+}
+
+.start-game {
+  width: 400px;
+  height: 100px;
+  flex-shrink: 0;
+  margin: 4px 2px;
+  line-height: normal;
+  font-weight: 700;
+  font-size: 50px;
+  padding: 16px 20px;
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  text-align: center;
+  display: inline-block;
+}
+.start-game:hover {
+  background-color: var(--secondary-color-accent);
+  cursor: pointer;
+}
+
+.profile-picture {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: #f3f3f3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.icon {
+  color: #333;
+}
