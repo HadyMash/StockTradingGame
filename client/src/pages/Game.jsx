@@ -361,7 +361,17 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
           setQuantity(val);
           setEstimatedTotal(Math.round(val * price * 100) / 100);
         }}
-        suffix={() => <p className="max-button">Max</p>}
+        suffix={() => (
+          <p
+            className="max-button"
+            onClick={() => {
+              setQuantity(maxQuantity);
+              setEstimatedTotal(Math.round(maxQuantity * price * 100) / 100);
+            }}
+          >
+            Max
+          </p>
+        )}
       />
       <TextInput
         type="number"
@@ -376,7 +386,17 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
           setEstimatedTotal(val);
           setQuantity(roundedQuantity);
         }}
-        suffix={() => <p className="max-button">Max</p>}
+        suffix={() => (
+          <p
+            className="max-button"
+            onClick={() => {
+              setQuantity(Math.round(maxTotal * 100) / 100);
+              setEstimatedTotal(maxTotal);
+            }}
+          >
+            Max
+          </p>
+        )}
       />
       {/* // TODO: style slider */}
       <Slider

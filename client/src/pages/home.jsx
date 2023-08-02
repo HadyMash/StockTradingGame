@@ -152,6 +152,7 @@ function CreateGame({
   return (
     <React.Fragment>
       <GameSettingSlider
+        barClassName="slider-bar"
         title={'Rounds'}
         min={5}
         max={50}

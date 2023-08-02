@@ -741,3 +741,28 @@ input[type='range']:focus::-ms-fill-upper {
 .icon {
   color: #333;
 }
+.slider-bar {
+  width: 100%;
+  height: 10px;
+  background-color: red;
+  border-radius: 5px;
+  margin: 10px 0;
+}
+.rs-slider-progress-bar {
+  background-color: var(--secondary-color);
+  /* height: 12px; */
+}
+/* .rs-slider-bar {
+  height: 12px;
+} */
+.rs-slider-handle:before {
+  border: 2px solid var(--secondary-color);
+}
+.rs-tooltip {
+  background-color: var(--secondary-color);
+  color: white;
+  border-radius: var(--border-radius);
+  font-size: 16px;
+  font-weight: 700;
+  padding: 5px 7px;
+}
