@@ -641,7 +641,6 @@ input[type='range']:focus::-ms-fill-upper {
   height: 0px;
   flex-shrink: 0;
   color: #000;
-  font-family: Inter;
   font-size: 100px;
   font-style: normal;
   font-weight: 400;
