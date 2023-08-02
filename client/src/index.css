@@ -490,6 +490,9 @@ input[type='range']:focus::-ms-fill-upper {
 .buy {
   background-color: var(--secondary-color);
 }
+.buy:hover {
+  background-color: var(--secondary-color-accent);
+}
 
 .buy:hover {
   background-color: var(--secondary-color-accent);
