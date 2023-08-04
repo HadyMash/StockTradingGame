@@ -32,18 +32,6 @@ function Lobby() {
         flexDirection: 'column',
       }}
     >
-      {/* <div
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center', 
-        }}
-      >
-        lobby
-      </div>
-      <div>ahmed2</div>
-      <div>ahmed3</div> */}
-
       <div className="lobby">
         <h1>Lobby</h1>
         {/* <NameComponent /> */}
@@ -64,10 +52,6 @@ function Lobby() {
           <div
             className="names"
             style={{
-              // gridTemplateColumns: `repeat(${Math.min(
-              //   5,
-              //   Math.floor((windowSize.width - 300) / PLAYER_NAME_WIDTH_PIXELS)
-              // )}, 100px)`,
               gridAutoColumns: `repeat(5, 100px)`,
             }}
           >
@@ -107,16 +91,12 @@ function HostComponent(props) {
 
   return (
     <div className="side-by-side">
-      {/* <span>PFP</span> */}
       <PlayerAvatar playerName={name} />
       <span className="playersnames">{name}</span>
     </div>
   );
 }
 function NameComponent(props) {
-  // to handel the state of the check button
-  //   const [isChecked, setIsChecked] = useState(false);
-  //   to handle the state of the X button
   const { i, name, handleCheckboxChange } = props;
   const [isModalVisible, setIsModalVisible] = useState(false);
   //   Esxit button
@@ -135,7 +115,6 @@ function NameComponent(props) {
 
   return (
     <div className="side-by-side">
-      {/* <span>PFP</span> */}
       <PlayerAvatar playerName={name} />
       <span className="playersnames">{name}</span>
 
@@ -147,15 +126,6 @@ function NameComponent(props) {
     </div>
   );
 }
-
-// const isChecked = [false, false, false, false]
-// isCheck[index] = event.target.checked
-
-// const listItems = items.map((item, index) => <li key={item} handleCheckboxChange(event, index)>{item}</li>);
-// <li key={item}>{item}</li>
-//<li key={item}>{item}</li>
-//<li key={item}>{item}</li>
-//<li key={item}>{item}</li>
 
 // Hook
 function useWindowSize() {
