@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import React, { useState, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser } from '@fortawesome/free-solid-svg-icons';
-
+import PlayerAvatar from '../shared/PlayerAvatar';
 const PLAYER_NAME_WIDTH_PIXELS = 100;
 
 // TODO: get code from memory router params and url as fallback
@@ -13,7 +13,7 @@ function Lobby() {
   useEffect(() => {
     setTimeout(() => {
       navigate('/game');
-    }, 3000);
+    }, 100000);
   }, []);
 
   // const names= useEffect({
@@ -108,8 +108,8 @@ function HostComponent(props) {
   return (
     <div className="side-by-side">
       {/* <span>PFP</span> */}
-      <ProfilePicture />
-      <span>{name}</span>
+      <PlayerAvatar playerName={name} />
+      <span className="playersnames">{name}</span>
     </div>
   );
 }
@@ -136,8 +136,8 @@ function NameComponent(props) {
   return (
     <div className="side-by-side">
       {/* <span>PFP</span> */}
-      <ProfilePicture />
-      <span>{name}</span>
+      <PlayerAvatar playerName={name} />
+      <span className="playersnames">{name}</span>
 
       <button className="leave-button" onClick={handleXClick}>
         X
