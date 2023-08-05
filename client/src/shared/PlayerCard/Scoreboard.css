@@ -1,0 +1,62 @@
+.winner {
+  text-align: center;
+  height: 50%;
+}
+.player-name {
+  font-size: xx-large;
+  font-weight: 500;
+  margin: 10px 0;
+  margin-right: 60px;
+  padding-right: 40px;
+}
+.card-header {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: rgb(99, 99, 99);
+  margin-left: 50px;
+}
+
+.card {
+  background-color: #e7e6e6;
+  width: 300px;
+  /* height: 300px; */
+  padding: 10px;
+  border-radius: 2%;
+  margin: auto;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.losers {
+  text-align: center;
+}
+
+.losers-row1 {
+  display: flex;
+}
+.losers-row2 {
+  display: flex;
+}
+
+.row-stock {
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  font-size: xx-large;
+  font-weight: 500;
+}
+
+.stock-name {
+  text-align: left;
+}
+
+.stock-price {
+  text-align: right;
+}
