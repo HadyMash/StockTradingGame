@@ -2,7 +2,6 @@
 import RowStock from './RowStock';
 
 function Card({ player }) {
-    console.log(player)
     return (
         <div className='card-cont'>
             <div className="card">
