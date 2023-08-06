@@ -503,7 +503,6 @@ app.get('/update', async (req, res) => {
       };
     } else if (game.state === GameState.active) {
       // TODO: check for end conditions
-      // TODO: send ai net worth along with players
       const dayNumber = Math.floor(
         (Date.now() - game.startTimestamp) /
           1000 /
