@@ -258,7 +258,12 @@ export async function getGame(id) {
  * @param {Player} host (Player)
  * @returns {Game} the created game (Game)
  */
-export async function createNewGame(hostName, gameSettings, stockStartIds) {
+export async function createNewGame(
+  hostName,
+  gameSettings,
+  stockStartIds,
+  aiNetWorthOverTime
+) {
   // create player
   const player = new Player(
     Player.generateId(),
@@ -278,9 +283,11 @@ export async function createNewGame(hostName, gameSettings, stockStartIds) {
     player.id
   );
   try {
-    var { statusCode, resource } = await gamesContainer.items.create(
-      game.toObject()
-    );
+    const gameObj = game.toObject();
+    if (aiNetWorthOverTime.length == gameSettings.maxGameTurns) {
+      gameObj.aiNetWorthOverTime = aiNetWorthOverTime;
+    }
+    var { statusCode, resource } = await gamesContainer.items.create(gameObj);
     return {
       statusCode: statusCode,
       player: player.toObject(),
