@@ -4,7 +4,7 @@ import { Player } from '../player.mjs';
 import { Game, GameSettings, GameState } from '../game.mjs';
 
 // TODO: avoid hard coding later
-const stockEntryCount = {
+export const stockEntryCount = {
   AAPL: 5910,
   AMZN: 5910,
   MSFT: 5920,

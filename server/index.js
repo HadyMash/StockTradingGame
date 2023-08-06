@@ -5,7 +5,7 @@ import { GameSettings } from '../game.mjs';
 const app = express();
 app.use(express.json());
 
-app.post('/createNewGame', async (req, res) => {
+app.post('/create-new-game', async (req, res) => {
   try {
     const hostName = req.body.hostName;
     const maxGameTurns = req.body.maxGameTurns;
@@ -13,38 +13,123 @@ app.post('/createNewGame', async (req, res) => {
     const startingMoney = req.body.startingMoney;
     const targetMoney = req.body.targetMoney;
     const maxPlayers = req.body.maxPlayers;
-    if (
-      Number.isInteger(maxGameTurns) &&
-      Number.isInteger(roundDurationSeconds) &&
-      Number.isInteger(startingMoney) &&
-      Number.isInteger(targetMoney) &&
-      Number.isInteger(maxPlayers)
-    ) {
-      const gameSettings = new GameSettings(
-        maxGameTurns,
-        roundDurationSeconds,
-        startingMoney,
-        targetMoney,
-        maxPlayers
-      );
 
-      const stockStartIds = {
-        MSFT: db.getRandomSymbolId('MSFT', maxGameTurns, 0),
-        GOOG: db.getRandomSymbolId('GOOG', maxGameTurns, 0),
-      };
-      const response = await db.createNewGame(
-        hostName,
-        gameSettings,
-        stockStartIds
-      );
-      // res.status(201).json({
-      //   success: true,
-      //   message: 'Game created successfully',
-      // });
-      res.send(response);
-    } else {
-      res.send('Invalid input!');
+    if (!hostName) {
+      res.status(400).json({
+        error: 'Missing host name',
+      });
+      return;
     }
+
+    if (!maxGameTurns) {
+      res.status(400).json({
+        error: 'Missing max game turns',
+      });
+      return;
+    }
+
+    if (!roundDurationSeconds) {
+      res.status(400).json({
+        error: 'Missing round duration seconds',
+      });
+      return;
+    }
+
+    if (!startingMoney) {
+      res.status(400).json({
+        error: 'Missing starting money',
+      });
+      return;
+    }
+
+    if (startingMoney <= 0) {
+      res.status(400).json({
+        error: 'Starting money must be greater than 0',
+      });
+      return;
+    }
+
+    if (!targetMoney) {
+      res.status(400).json({
+        error: 'Missing target money',
+      });
+      return;
+    }
+
+    if (targetMoney <= startingMoney) {
+      res.status(400).json({
+        error: 'Target money must be greater than starting money',
+      });
+      return;
+    }
+
+    if (!maxPlayers) {
+      res.status(400).json({
+        error: 'Missing max players',
+      });
+      return;
+    }
+
+    if (maxPlayers <= 1) {
+      res.status(400).json({
+        error: 'Max players must be greater than 1',
+      });
+      return;
+    }
+
+    const gameSettings = new GameSettings(
+      maxGameTurns,
+      roundDurationSeconds,
+      startingMoney,
+      targetMoney,
+      maxPlayers
+    );
+
+    console.log(gameSettings.toObject());
+
+    const stockStartIds = {};
+    const symbols = Object.keys(db.stockEntryCount);
+    for (let i = 0; i < symbols.length; i++) {
+      const symbol = symbols[i];
+      const symbolId = db.getRandomSymbolId(
+        symbol,
+        gameSettings.maxGameTurns,
+        20
+      );
+      stockStartIds[symbol] = symbolId;
+    }
+
+    console.log(stockStartIds);
+
+    if (stockStartIds.length === 0) {
+      res.status(500).json({
+        error: 'Failed to generate stock start ids',
+      });
+    }
+
+    const response = await db.createNewGame(
+      hostName,
+      gameSettings,
+      stockStartIds
+    );
+
+    console.log(response);
+
+    if (response.statusCode !== 201) {
+      res.status(response.statusCode).json({
+        error: response.error,
+      });
+      return;
+    }
+
+    const game = response.resource;
+
+    res.status(201).json({
+      gameId: game.id,
+      gameSettings: game.gameSettings,
+      player: response.player,
+      players: [],
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({
@@ -55,16 +140,50 @@ app.post('/createNewGame', async (req, res) => {
   }
 });
 
-app.post('/addPlayer', async (req, res) => {
+app.post('/join-game', async (req, res) => {
   try {
     const gameId = req.body.gameId;
-    const playerName = req.body.playerName;
+    const playerName = req.body.name;
+
+    if (!gameId) {
+      res.status(400).json({
+        error: 'Missing game id',
+      });
+      return;
+    }
+
+    if (!playerName) {
+      res.status(400).json({
+        error: 'Missing player name',
+      });
+      return;
+    }
+
     const response = await db.addPlayerToGame(gameId, playerName);
+
+    console.log(response);
+
+    if (response.statusCode !== 200) {
+      res.status(response.statusCode).json({
+        error: response.error,
+      });
+      return;
+    }
+
     res.status(201).json({
-      success: true,
-      message: 'Player added successfully',
+      gameId: response.resource.id,
+      gameSettings: response.resource.gameSettings,
+      player: response.player,
+      players: Object.keys(response.resource.players)
+        .filter((playerId) => playerId !== response.player.id)
+        .map((playerId) => {
+          return {
+            id: playerId,
+            name: response.resource.players[playerId].name,
+            netWorth: response.resource.players[playerId].money,
+          };
+        }),
     });
-    //res.send(response);
     console.log(response);
   } catch (err) {
     console.error(err);
@@ -203,8 +322,6 @@ app.get('/getRandomStocks', async (req, res) => {
 
 const port = 3000;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
-
-
 
 //createNewgame---which info will be sent
 //getRandomStocks---rounds!
