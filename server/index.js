@@ -275,7 +275,7 @@ app.post('/remove-player', async (req, res) => {
   }
 });
 
-app.post('/startGame', async (req, res) => {
+app.post('/start-game', async (req, res) => {
   try {
     const gameId = req.body.gameId;
     const playerId = req.body.playerId;
@@ -294,25 +294,25 @@ app.post('/startGame', async (req, res) => {
   }
 });
 
-app.post('/endGame', async (req, res) => {
-  try {
-    const gameId = req.body.gameId;
-    const response = await db.endGame(gameId);
-    res.status(200).json({
-      success: true,
-      message: 'Game ended successfully',
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to end game',
-      error: err.message,
-    });
-  }
-});
+// app.post('/endGame', async (req, res) => {
+//   try {
+//     const gameId = req.body.gameId;
+//     const response = await db.endGame(gameId);
+//     res.status(200).json({
+//       success: true,
+//       message: 'Game ended successfully',
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to end game',
+//       error: err.message,
+//     });
+//   }
+// });
 
-app.post('/buyStock', async (req, res) => {
+app.post('/buy', async (req, res) => {
   try {
     const symbol = req.body.symbol;
     const quantity = req.body.quantity;
@@ -335,7 +335,7 @@ app.post('/buyStock', async (req, res) => {
   }
 });
 
-app.post('/sellStock', async (req, res) => {
+app.post('/sell', async (req, res) => {
   try {
     const gameId = req.body.gameId;
     const playerId = req.body.playerId;
@@ -359,28 +359,24 @@ app.post('/sellStock', async (req, res) => {
   }
 });
 
-app.get('/getRandomStocks', async (req, res) => {
-  try {
-    const symbol = req.body.symbol;
-    const maxGameDuration = req.body.maxGameDuration;
-    const count = req.body.count;
-    const gameId = req.body.gameId;
-    //const game = db.getGame(gameId);
-    const data = await db.getRandomMarketDataEntries(
-      symbol,
-      maxGameDuration,
-      count
-    );
-    res.status(200).json(data);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Internal Server Error');
-  }
-});
+// app.get('/getRandomStocks', async (req, res) => {
+//   try {
+//     const symbol = req.body.symbol;
+//     const maxGameDuration = req.body.maxGameDuration;
+//     const count = req.body.count;
+//     const gameId = req.body.gameId;
+//     //const game = db.getGame(gameId);
+//     const data = await db.getRandomMarketDataEntries(
+//       symbol,
+//       maxGameDuration,
+//       count
+//     );
+//     res.status(200).json(data);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send('Internal Server Error');
+//   }
+// });
 
 const port = 3000;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
-
-//createNewgame---which info will be sent
-//getRandomStocks---rounds!
-//integers in create new game!
