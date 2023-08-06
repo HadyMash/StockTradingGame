@@ -336,11 +336,11 @@ export async function addPlayerToGame(gameId, playerName) {
   } catch (error) {
     return {
       statusCode: statusCode,
-      error: error.toObject(),
+      error: error,
     };
   }
 }
-// TODO: remove player from game
+
 /**
  * Removes a player from a game
  * @param {string} gameId - the id of the game (string)
@@ -360,11 +360,36 @@ export async function removePlayerFromGame(gameId, playerId, requestId) {
   if (!game.players[playerId]) {
     throw new Error('Player not found');
   }
+  if (game.state !== GameState.waiting) {
+    throw new Error('Game has already started');
+  }
+
   const operations = [{ op: 'remove', path: `/players/${playerId}` }];
+
+  if (game.hostId === playerId) {
+    console.log('host is leaving');
+    // if the host is leaving, promote a new host
+    const filteredIds = Object.keys(game.players).filter(
+      (id) => id != game.hostId
+    );
+    if (filteredIds.length > 0) {
+      const newHostId = filteredIds[0];
+      operations.push({ op: 'replace', path: '/hostId', value: newHostId });
+    }
+  }
+
   try {
     var { statusCode, resource } = await gamesContainer
       .item(gameId.toString(), gameId.toString())
       .patch(operations);
+
+    if (Object.keys(resource.players).length === 0) {
+      console.log('no players left, deleting game');
+      console.log(await deleteGame(gameId));
+      return {
+        statusCode: 204,
+      };
+    }
 
     return {
       statusCode: statusCode,
@@ -373,7 +398,7 @@ export async function removePlayerFromGame(gameId, playerId, requestId) {
   } catch (error) {
     return {
       statusCode: statusCode,
-      error: error.toObject(),
+      error: error,
     };
   }
 }
@@ -551,5 +576,14 @@ async function getTransactionInfo(gameId, playerId, symbol, quantity) {
     numOfStocks: numOfStocks,
     playerMoney: playerMoney,
     operations: operations,
+  };
+}
+
+async function deleteGame(gameId) {
+  const { statusCode } = await gamesContainer
+    .item(gameId.toString(), gameId.toString())
+    .delete();
+  return {
+    statusCode: statusCode,
   };
 }

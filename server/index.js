@@ -125,10 +125,15 @@ app.post('/create-new-game', async (req, res) => {
     const game = response.resource;
 
     res.status(201).json({
-      gameId: game.id,
-      gameSettings: game.gameSettings,
+      game: {
+        id: response.resource.id,
+        settings: response.resource.gameSettings,
+        state: response.resource.state,
+        hostId: response.resource.hostId,
+        stocks: Object.keys(response.resource.stockStartIds),
+        players: [],
+      },
       player: response.player,
-      players: [],
     });
   } catch (err) {
     console.error(err);
@@ -171,18 +176,23 @@ app.post('/join-game', async (req, res) => {
     }
 
     res.status(201).json({
-      gameId: response.resource.id,
-      gameSettings: response.resource.gameSettings,
+      game: {
+        id: response.resource.id,
+        settings: response.resource.gameSettings,
+        state: response.resource.state,
+        hostId: response.resource.hostId,
+        stocks: Object.keys(response.resource.stockStartIds),
+        players: Object.keys(response.resource.players)
+          .filter((playerId) => playerId !== response.player.id)
+          .map((playerId) => {
+            return {
+              id: playerId,
+              name: response.resource.players[playerId].name,
+              netWorth: response.resource.players[playerId].money,
+            };
+          }),
+      },
       player: response.player,
-      players: Object.keys(response.resource.players)
-        .filter((playerId) => playerId !== response.player.id)
-        .map((playerId) => {
-          return {
-            id: playerId,
-            name: response.resource.players[playerId].name,
-            netWorth: response.resource.players[playerId].money,
-          };
-        }),
     });
     console.log(response);
   } catch (err) {
@@ -195,18 +205,66 @@ app.post('/join-game', async (req, res) => {
   }
 });
 
-app.delete('/removePlayer', async (req, res) => {
+app.post('/remove-player', async (req, res) => {
   try {
     const gameId = req.body.gameId;
     const playerId = req.body.playerId;
     const requestId = req.body.requestId;
+
+    if (!gameId) {
+      res.status(400).json({
+        error: 'Missing game id',
+      });
+      return;
+    }
+
+    if (!playerId) {
+      res.status(400).json({
+        error: 'Missing player id',
+      });
+      return;
+    }
+
+    if (!requestId) {
+      res.status(400).json({
+        error: 'Missing request id',
+      });
+      return;
+    }
+
     const response = await db.removePlayerFromGame(gameId, playerId, requestId);
-    res.status(201).json({
-      success: true,
-      message: 'Player removed successfully',
-    });
-    //res.send(response);
+
+    if (response.statusCode !== 200) {
+      res.status(response.statusCode).json({
+        error: response.error,
+      });
+      return;
+    }
+
     console.log(response);
+
+    if (response.statusCode === 204) {
+      console.log('game deleted, 204');
+      res.status(204).json({});
+      return;
+    }
+
+    const players = response.resource.players;
+
+    res.status(201).json({
+      hostId: response.resource.hostId,
+      gameState: response.resource.state,
+      startTimestamp: response.resource.startTimestamp,
+      players: Object.keys(players)
+        .filter((playerId) => playerId !== requestId)
+        .map((playerId) => {
+          return {
+            id: playerId,
+            name: players[playerId].name,
+            netWorth: players[playerId].money,
+          };
+        }),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({
