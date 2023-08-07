@@ -120,7 +120,7 @@ app.post('/create-new-game', async (req, res) => {
       for (let i = 0; i < symbols.length; i++) {
         const symbol = symbols[i];
         marketData[symbol] = [];
-        console.log('starting', symbol);
+        // console.log('starting', symbol);
 
         const rawEntries = await db.getMarketDataEntries(
           symbol,
@@ -140,12 +140,12 @@ app.post('/create-new-game', async (req, res) => {
             moneyOverTime[j] = moneyOverTime[j - 1];
           }
           let aiPrediction = makeDecision(marketData[symbol].slice(0, j + 1));
-          console.log(`${j}:`, aiPrediction);
+          // console.log(`${j}:`, aiPrediction);
           if (aiPrediction.decision === AIDecision.BUY) {
             // * Buy
-            console.log('buying');
+            // console.log('buying');
             if (!assetsOverTime[j - 1][symbol]) {
-              console.log('set current to 0 at index:', j);
+              // console.log('set current to 0 at index:', j);
               assetsOverTime[j][symbol] = 0;
             } else {
               assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
@@ -162,7 +162,7 @@ app.post('/create-new-game', async (req, res) => {
               marketData[symbol][j].price * aiPrediction.quantity;
           } else if (aiPrediction.decision === AIDecision.SELL) {
             // * Sell
-            console.log('selling');
+            // console.log('selling');
             if (assetsOverTime[j - 1][symbol]) {
               assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
               if (assetsOverTime[j][symbol] < aiPrediction.quantity) {
@@ -174,20 +174,20 @@ app.post('/create-new-game', async (req, res) => {
             }
           } else {
             // * Hold
-            console.log('holding');
-            console.log(assetsOverTime[j - 1]);
+            // console.log('holding');
+            // console.log(assetsOverTime[j - 1]);
             if (assetsOverTime[j - 1][symbol]) {
               assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol] ?? 0;
             }
           }
         }
-        console.log(moneyOverTime);
-        console.log(assetsOverTime);
+        // console.log(moneyOverTime);
+        // console.log(assetsOverTime);
       }
 
-      console.log('calculating net worth');
-      console.log(assetsOverTime);
-      console.log(moneyOverTime);
+      // console.log('calculating net worth');
+      // console.log(assetsOverTime);
+      // console.log(moneyOverTime);
 
       for (let i = 0; i < maxGameTurns; i++) {
         aiNetWorthOverTime[i] = 0;
@@ -198,7 +198,7 @@ app.post('/create-new-game', async (req, res) => {
         }
         aiNetWorthOverTime[i] = netWorth;
       }
-      console.log('done with ai', aiNetWorthOverTime);
+      // console.log('done with ai', aiNetWorthOverTime);
     } catch (error) {
       console.error('error with ai:', error);
     }
@@ -222,6 +222,7 @@ app.post('/create-new-game', async (req, res) => {
     const game = response.resource;
 
     res.status(201).json({
+      // TODO: send game settings
       game: {
         id: response.resource.id,
         settings: response.resource.gameSettings,
@@ -510,19 +511,20 @@ app.get('/update', async (req, res) => {
       );
       const stockData = new Array(dayNumber);
 
-      console.log('day number', dayNumber);
+      // console.log('day number', dayNumber);
 
       // for each symbol
       for (let i = 0; i < Object.keys(game.stockStartIds).length; i++) {
         const symbol = Object.keys(game.stockStartIds)[i];
-        console.log('starting', symbol);
+        // console.log('starting', symbol);
         // get prices from start id to current day + a buffer of 20 days
         const rawEntries = await db.getMarketDataEntries(
           symbol,
           game.stockStartIds[symbol],
+          // TODO: replace all + 20 with a constant
           dayNumber + 20
         );
-        console.log('raw entries', rawEntries);
+        // console.log('raw entries', rawEntries);
         // for each day
         for (let j = 0; j < rawEntries.length; j++) {
           const entry = rawEntries[j];
@@ -544,7 +546,7 @@ app.get('/update', async (req, res) => {
         }
       }
 
-      console.log('stock data', stockData);
+      // console.log('stock data', stockData);
 
       response = {
         gameState: game.state,
@@ -582,7 +584,7 @@ app.get('/update', async (req, res) => {
         player: game.players[playerId],
         stockData: stockData,
       };
-      console.log('response', response);
+      // console.log('response', response);
     } else if (game.state === GameState.finished) {
       let winner = game.players[Object.keys(game.players)[0]];
       for (let i = 0; i < Object.keys(game.players).length; i++) {
