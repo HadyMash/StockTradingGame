@@ -4,21 +4,25 @@ import { createAvatar } from '@dicebear/core';
 import { thumbs } from '@dicebear/collection';
 import { Avatar } from 'rsuite';
 
-function PlayerAvatar({ playerName }) {
+function PlayerAvatar({ playerName, sizeInPixels = 60 }) {
   PlayerAvatar.propTypes = {
     playerName: PropTypes.string.isRequired,
+    sizeInPixels: PropTypes.number,
   };
 
   const avatar = useMemo(() => {
     return createAvatar(thumbs, {
-      size: 60,
+      size: sizeInPixels,
       seed: playerName,
     }).toDataUriSync();
-  }, [playerName]);
+  }, [playerName, sizeInPixels]);
 
   return (
     <Avatar size="lg">
-      <img src={avatar}></img>
+      <img
+        src={avatar}
+        style={{ width: `${sizeInPixels}px`, height: `${sizeInPixels}px` }}
+      ></img>
     </Avatar>
   );
 }

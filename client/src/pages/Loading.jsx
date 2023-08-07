@@ -6,18 +6,13 @@ function Loading() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const code = window.location.search.substring(1);
+    const code = new URLSearchParams(window.location.search).get('code');
     if (code) {
-      // TODO: get game and route to lobby or game accordingly
-      // get code with use params and use url as fallback
-      // ! temp
-      // TODO: remove artificial delay when data is actually fetched from the server
-      setTimeout(() => {
-        navigate(`/lobby/${code}`);
-      }, 2000);
-    } else {
-      navigate('/home');
+      // TODO: check if a game with this code exists and route to home / lobby/game accordingly
+      navigate(`/home/${code}`);
+      return;
     }
+    navigate('/home');
   }, []);
 
   // TODO: change spinner color

@@ -1,11 +1,19 @@
 import * as db from './db.js';
 import express from 'express';
+import cors from 'cors';
 //import * as game from '../game.mjs';
 import { Game, GameSettings, GameState } from '../game.mjs';
 import { makeDecision, AIDecision } from './ai.js';
 
 const app = express();
+
 app.use(express.json());
+app.use(
+  cors({
+    // TODO: update for production build
+    origin: '*',
+  })
+);
 
 app.post('/create-new-game', async (req, res) => {
   try {
@@ -17,6 +25,7 @@ app.post('/create-new-game', async (req, res) => {
     const maxPlayers = req.body.maxPlayers;
 
     if (!hostName) {
+      console.log('Missing host name');
       res.status(400).json({
         error: 'Missing host name',
       });
@@ -24,6 +33,7 @@ app.post('/create-new-game', async (req, res) => {
     }
 
     if (!maxGameTurns) {
+      console.log('Missing max game turns');
       res.status(400).json({
         error: 'Missing max game turns',
       });
@@ -31,6 +41,7 @@ app.post('/create-new-game', async (req, res) => {
     }
 
     if (!roundDurationSeconds) {
+      console.log('Missing round duration seconds');
       res.status(400).json({
         error: 'Missing round duration seconds',
       });
@@ -38,6 +49,7 @@ app.post('/create-new-game', async (req, res) => {
     }
 
     if (!startingMoney) {
+      console.log('Missing starting money');
       res.status(400).json({
         error: 'Missing starting money',
       });
@@ -45,6 +57,7 @@ app.post('/create-new-game', async (req, res) => {
     }
 
     if (startingMoney <= 0) {
+      console.log('Starting money must be greater than 0');
       res.status(400).json({
         error: 'Starting money must be greater than 0',
       });
@@ -52,6 +65,7 @@ app.post('/create-new-game', async (req, res) => {
     }
 
     if (!targetMoney) {
+      console.log('Missing target money');
       res.status(400).json({
         error: 'Missing target money',
       });
@@ -59,6 +73,7 @@ app.post('/create-new-game', async (req, res) => {
     }
 
     if (targetMoney <= startingMoney) {
+      console.log('Target money must be greater than starting money');
       res.status(400).json({
         error: 'Target money must be greater than starting money',
       });
@@ -66,6 +81,7 @@ app.post('/create-new-game', async (req, res) => {
     }
 
     if (!maxPlayers) {
+      console.log('Missing max players');
       res.status(400).json({
         error: 'Missing max players',
       });
@@ -73,6 +89,7 @@ app.post('/create-new-game', async (req, res) => {
     }
 
     if (maxPlayers <= 1) {
+      console.log('Max players must be greater than 1');
       res.status(400).json({
         error: 'Max players must be greater than 1',
       });
@@ -223,12 +240,18 @@ app.post('/create-new-game', async (req, res) => {
 
     res.status(201).json({
       game: {
-        id: response.resource.id,
-        settings: response.resource.gameSettings,
-        state: response.resource.state,
-        hostId: response.resource.hostId,
-        stocks: Object.keys(response.resource.stockStartIds),
-        players: [],
+        id: game.id,
+        settings: game.gameSettings,
+        state: game.state,
+        hostId: game.hostId,
+        stocks: Object.keys(game.stockStartIds),
+        players: Object.keys(game.players).map((playerId) => {
+          return {
+            id: playerId,
+            name: game.players[playerId].name,
+            netWorth: game.players[playerId].money,
+          };
+        }),
       },
       player: response.player,
     });
@@ -279,15 +302,13 @@ app.post('/join-game', async (req, res) => {
         state: response.resource.state,
         hostId: response.resource.hostId,
         stocks: Object.keys(response.resource.stockStartIds),
-        players: Object.keys(response.resource.players)
-          .filter((playerId) => playerId !== response.player.id)
-          .map((playerId) => {
-            return {
-              id: playerId,
-              name: response.resource.players[playerId].name,
-              netWorth: response.resource.players[playerId].money,
-            };
-          }),
+        players: Object.keys(response.resource.players).map((playerId) => {
+          return {
+            id: playerId,
+            name: response.resource.players[playerId].name,
+            netWorth: response.resource.players[playerId].money,
+          };
+        }),
       },
       player: response.player,
     });
@@ -352,15 +373,13 @@ app.post('/remove-player', async (req, res) => {
       hostId: response.resource.hostId,
       gameState: response.resource.state,
       startTimestamp: response.resource.startTimestamp,
-      players: Object.keys(players)
-        .filter((playerId) => playerId !== requestId)
-        .map((playerId) => {
-          return {
-            id: playerId,
-            name: players[playerId].name,
-            netWorth: players[playerId].money,
-          };
-        }),
+      players: Object.keys(players).map((playerId) => {
+        return {
+          id: playerId,
+          name: players[playerId].name,
+          netWorth: players[playerId].money,
+        };
+      }),
     });
   } catch (err) {
     console.error(err);
@@ -433,17 +452,15 @@ app.post('/start-game', async (req, res) => {
       game: {
         state: response.resource.state,
         players: [
-          ...Object.keys(response.resource.players)
-            .filter((id) => id !== playerId)
-            .map((playerId) => {
-              // calculate player's net worth
-              let netWorth = resource.settings.startingMoney;
-              return {
-                id: playerId,
-                name: game.players[playerId].name,
-                netWorth: netWorth,
-              };
-            }),
+          ...Object.keys(response.resource.players).map((playerId) => {
+            // calculate player's net worth
+            let netWorth = resource.settings.startingMoney;
+            return {
+              id: playerId,
+              name: game.players[playerId].name,
+              netWorth: netWorth,
+            };
+          }),
           {
             id: 'ai',
             name: 'AI',
@@ -533,39 +550,35 @@ app.post('/buy', async (req, res) => {
     res.status(200).json({
       gameState: response.resource.state,
       players: [
-        ...Object.keys(response.resource.players)
-          .filter((id) => id !== playerId)
-          .map((playerId) => {
-            // calculate player's net worth
-            console.log('playerId', playerId);
-            let netWorth = response.resource.players[playerId].money;
-            console.log('netWorth', netWorth);
-            for (
-              let i = 0;
-              i <
-              Object.keys(response.resource.players[playerId].stocks).length;
-              i++
-            ) {
-              const symbol = Object.keys(
-                response.resource.players[playerId].stocks
-              )[i];
-              console.log('symbol', symbol);
-              const quantity =
-                response.resource.players[playerId].stocks[symbol];
-              console.log('quantity', quantity);
-              const price = stockData[symbol].price;
-              console.log('price', price);
+        ...Object.keys(response.resource.players).map((playerId) => {
+          // calculate player's net worth
+          console.log('playerId', playerId);
+          let netWorth = response.resource.players[playerId].money;
+          console.log('netWorth', netWorth);
+          for (
+            let i = 0;
+            i < Object.keys(response.resource.players[playerId].stocks).length;
+            i++
+          ) {
+            const symbol = Object.keys(
+              response.resource.players[playerId].stocks
+            )[i];
+            console.log('symbol', symbol);
+            const quantity = response.resource.players[playerId].stocks[symbol];
+            console.log('quantity', quantity);
+            const price = stockData[symbol].price;
+            console.log('price', price);
 
-              netWorth += quantity * price;
-            }
-            console.log('netWorth', netWorth);
+            netWorth += quantity * price;
+          }
+          console.log('netWorth', netWorth);
 
-            return {
-              id: playerId,
-              name: response.resource.players[playerId].name,
-              netWorth: netWorth,
-            };
-          }),
+          return {
+            id: playerId,
+            name: response.resource.players[playerId].name,
+            netWorth: netWorth,
+          };
+        }),
         {
           id: 'ai',
           name: 'AI',
@@ -654,39 +667,35 @@ app.post('/sell', async (req, res) => {
     res.status(200).json({
       gameState: response.resource.state,
       players: [
-        ...Object.keys(response.resource.players)
-          .filter((id) => id !== playerId)
-          .map((playerId) => {
-            // calculate player's net worth
-            console.log('playerId', playerId);
-            let netWorth = response.resource.players[playerId].money;
-            console.log('netWorth', netWorth);
-            for (
-              let i = 0;
-              i <
-              Object.keys(response.resource.players[playerId].stocks).length;
-              i++
-            ) {
-              const symbol = Object.keys(
-                response.resource.players[playerId].stocks
-              )[i];
-              console.log('symbol', symbol);
-              const quantity =
-                response.resource.players[playerId].stocks[symbol];
-              console.log('quantity', quantity);
-              const price = stockData[symbol].price;
-              console.log('price', price);
+        ...Object.keys(response.resource.players).map((playerId) => {
+          // calculate player's net worth
+          console.log('playerId', playerId);
+          let netWorth = response.resource.players[playerId].money;
+          console.log('netWorth', netWorth);
+          for (
+            let i = 0;
+            i < Object.keys(response.resource.players[playerId].stocks).length;
+            i++
+          ) {
+            const symbol = Object.keys(
+              response.resource.players[playerId].stocks
+            )[i];
+            console.log('symbol', symbol);
+            const quantity = response.resource.players[playerId].stocks[symbol];
+            console.log('quantity', quantity);
+            const price = stockData[symbol].price;
+            console.log('price', price);
 
-              netWorth += quantity * price;
-            }
-            console.log('netWorth', netWorth);
+            netWorth += quantity * price;
+          }
+          console.log('netWorth', netWorth);
 
-            return {
-              id: playerId,
-              name: response.resource.players[playerId].name,
-              netWorth: netWorth,
-            };
-          }),
+          return {
+            id: playerId,
+            name: response.resource.players[playerId].name,
+            netWorth: netWorth,
+          };
+        }),
         {
           id: 'ai',
           name: 'AI',
@@ -741,15 +750,13 @@ app.get('/update', async (req, res) => {
     if (game.state === GameState.waiting) {
       response = {
         gameState: game.state,
-        players: Object.keys(game.players)
-          .filter((id) => id !== playerId)
-          .map((playerId) => {
-            return {
-              id: playerId,
-              name: game.players[playerId].name,
-              netWorth: game.players[playerId].money,
-            };
-          }),
+        players: Object.keys(game.players).map((playerId) => {
+          return {
+            id: playerId,
+            name: game.players[playerId].name,
+            netWorth: game.players[playerId].money,
+          };
+        }),
         hostId: game.hostId,
       };
     } else if (game.state === GameState.active) {
@@ -801,29 +808,27 @@ app.get('/update', async (req, res) => {
       response = {
         gameState: game.state,
         players: [
-          ...Object.keys(game.players)
-            .filter((id) => id !== playerId)
-            .map((playerId) => {
-              // calculate player's net worth
-              let netWorth = game.players[playerId].money;
-              for (
-                let i = 0;
-                i < Object.keys(game.players[playerId].stocks).length;
-                i++
-              ) {
-                const symbol = Object.keys(game.players[playerId].stocks)[i];
-                const quantity = game.players[playerId].stocks[symbol];
-                const price = stockData[20 + dayNumber];
+          ...Object.keys(game.players).map((playerId) => {
+            // calculate player's net worth
+            let netWorth = game.players[playerId].money;
+            for (
+              let i = 0;
+              i < Object.keys(game.players[playerId].stocks).length;
+              i++
+            ) {
+              const symbol = Object.keys(game.players[playerId].stocks)[i];
+              const quantity = game.players[playerId].stocks[symbol];
+              const price = stockData[20 + dayNumber];
 
-                netWorth += quantity * price;
-              }
+              netWorth += quantity * price;
+            }
 
-              return {
-                id: playerId,
-                name: game.players[playerId].name,
-                netWorth: netWorth,
-              };
-            }),
+            return {
+              id: playerId,
+              name: game.players[playerId].name,
+              netWorth: netWorth,
+            };
+          }),
           {
             id: 'ai',
             name: 'AI',

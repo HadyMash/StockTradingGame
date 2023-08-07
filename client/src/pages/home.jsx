@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import { ArrowLeftLine } from '@rsuite/icons';
@@ -9,21 +9,23 @@ import DividerWithText from '../shared/DividerWithText';
 
 // TODO: store user id in local storage or session storage or cookie
 function Home() {
+  const params = useParams();
   const [showCreateGame, setShowCreateGame] = useState(false);
   // TODO: replace name state with a ref
   const [name, setName] = useState('');
-  const [gameId, setGameId] = useState('');
+  const [gameId, setGameId] = useState(params.code?.toUpperCase() ?? '');
   const [maxRounds, setMaxRounds] = useState(20);
   const [roundDuration, setRoundDuration] = useState(15);
   const [startingMoney, setStartingMoney] = useState(500);
   const [targetMoney, setTargetMoney] = useState(1.5);
   const [maxPlayers, setMaxPlayers] = useState(5);
+  const [loadingJoinGame, setLoadingJoinGame] = useState(false);
+  const [loadingCreateGame, setLoadingCreateGame] = useState(false);
 
   const navigate = useNavigate();
 
-  function handleJoinGame() {
-    // ! temp
-    console.log('joinGameRequest');
+  async function handleJoinGame() {
+    setLoadingJoinGame(true);
     // TODO: validate
     let valid = true;
     // check name
@@ -40,18 +42,102 @@ function Home() {
     if (!valid) {
       return;
     }
-    // TODO: send request
-    // TODO: handle response
 
-    // ! temp
-    navigate('/lobby');
+    // send request
+    const response = await fetch('http://localhost:3000/join-game', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        gameId: gameId.toLowerCase(),
+      }),
+      // TODO: show error to user
+    }).catch((err) => console.error(err));
+
+    // handle response
+    try {
+      if (response) {
+        const data = await response.json();
+        console.log(data);
+        if (response.status === 200) {
+          const url = new URL(window.location);
+          url.searchParams.set('code', data.game.id);
+          window.history.replaceState({}, '', url);
+          navigate(`/lobby/${data.game.id}`, { state: data });
+        } else {
+          console.log('error:', response.status, data);
+          // TODO: show error to user
+        }
+      }
+    } finally {
+      setLoadingCreateGame(false);
+    }
+
+    setLoadingJoinGame(false);
   }
 
-  function handleCreateGame() {
+  async function handleCreateGame() {
     if (showCreateGame) {
-      // ! temp
-      console.log('createGameRequest');
-      navigate('/lobby');
+      setLoadingCreateGame(true);
+      // TODO: validate and show errors
+      let valid = true;
+      if (!name) {
+        valid = false;
+      }
+      if (!maxRounds) {
+        valid = false;
+      }
+      if (!roundDuration) {
+        valid = false;
+      }
+      if (!startingMoney) {
+        valid = false;
+      }
+      if (!targetMoney) {
+        valid = false;
+      }
+      if (!maxPlayers) {
+        valid = false;
+      }
+
+      console.log('valid:', valid);
+      if (!valid) return;
+
+      const response = await fetch('http://localhost:3000/create-new-game', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hostName: name,
+          maxGameTurns: maxRounds,
+          roundDurationSeconds: roundDuration,
+          startingMoney,
+          targetMoney: startingMoney * targetMoney,
+          maxPlayers,
+        }),
+        // TODO: show error to user
+      }).catch((err) => console.error(err));
+
+      try {
+        if (response) {
+          const data = await response.json();
+          console.log(data);
+          if (response.status === 201) {
+            const url = new URL(window.location);
+            url.searchParams.set('code', data.game.id);
+            window.history.replaceState({}, '', url);
+            navigate(`/lobby/${data.game.id}`, { state: data });
+          } else {
+            console.log('error:', response.status, data);
+            // TODO: show error to user
+          }
+        }
+      } finally {
+        setLoadingCreateGame(false);
+      }
     } else {
       setShowCreateGame(true);
     }
@@ -89,22 +175,34 @@ function Home() {
             gameId={gameId}
             setGameId={setGameId}
             handleJoinGame={handleJoinGame}
+            loadingJoinGame={loadingJoinGame}
           />
         )}
-        <button onClick={handleCreateGame} disabled={showCreateGame && !name}>
-          Create Game
+        <button
+          onClick={handleCreateGame}
+          disabled={(showCreateGame && !name) || loadingCreateGame}
+        >
+          {/* // TODO: consider replacing loading text with rsuite loading spinner */}
+          {loadingCreateGame ? 'Loading...' : 'Create Game'}
         </button>
       </div>
     </div>
   );
 }
 
-function JoinGame({ name, gameId, setGameId, handleJoinGame }) {
+function JoinGame({
+  name,
+  gameId,
+  setGameId,
+  handleJoinGame,
+  loadingJoinGame,
+}) {
   JoinGame.propTypes = {
     name: PropTypes.string.isRequired,
     gameId: PropTypes.string.isRequired,
     setGameId: PropTypes.func.isRequired,
     handleJoinGame: PropTypes.func.isRequired,
+    loadingJoinGame: PropTypes.bool.isRequired,
   };
 
   return (
@@ -116,8 +214,12 @@ function JoinGame({ name, gameId, setGameId, handleJoinGame }) {
         value={gameId}
         onChange={(e) => setGameId(e.target.value.toUpperCase())}
       />
-      <button onClick={handleJoinGame} disabled={!name || !gameId}>
-        Join Game
+      <button
+        onClick={handleJoinGame}
+        disabled={!name || !gameId || loadingJoinGame}
+      >
+        {/* // TODO: consider replacing loading text with rsuite spinner */}
+        {loadingJoinGame ? 'Loading...' : 'Join Game'}
       </button>
       <DividerWithText>or</DividerWithText>
     </React.Fragment>

@@ -1,157 +1,148 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import React, { useState, useRef } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser } from '@fortawesome/free-solid-svg-icons';
+import PropTypes from 'prop-types';
+import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import PlayerAvatar from '../shared/PlayerAvatar';
-const PLAYER_NAME_WIDTH_PIXELS = 100;
+import { Close } from '@rsuite/icons';
 
-// TODO: get code from memory router params and url as fallback
 function Lobby() {
+  const location = useLocation();
   const navigate = useNavigate();
+  const [game, setGame] = useState(location.state.game);
+  const localPlayer = location.state.player;
+  const [players, setPlayers] = useState(location.state.game.players);
+  const [kickPlayer, setKickPlayer] = useState(null);
 
   useEffect(() => {
-    setTimeout(() => {
-      navigate('/game');
-    }, 100000);
+    // TODO: set interval to poll for players
   }, []);
 
-  // const names= useEffect({
-  //   dispatch("")
-  // },[arrayName]);
-  const names = ['Amira', 'Sara', 'Adam', 'Nawar', 'Hady', 'Yahia'];
-  const windowSize = useWindowSize();
+  function handleKick(player) {
+    setKickPlayer(player);
+  }
+
+  function kick(id) {
+    // TODO: kick api call
+    setKickPlayer(null);
+  }
+
+  function handleLeave() {
+    // TODO: leave api call
+  }
+
+  function handleStartGame() {
+    // TODO: start game api call
+  }
 
   return (
     <div
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
+      style={{ position: 'relative', height: '100vh', boxSizing: 'border-box' }}
     >
       <div className="lobby">
-        <h1>Lobby</h1>
-        {/* <NameComponent /> */}
+        <div>
+          {/* // TODO: add game code copy */}
+          <h1>Lobby - {game.id.toUpperCase()}</h1>
+        </div>
+        {/* // TODO: add end fade here too */}
         <div
-          style={{
-            display: 'flex',
-            flexDirection: 'row',
-            justifyContent: 'center',
-            alignContent: 'center',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            height: '100%',
-            width: '100%',
-            alignItems: 'center',
-            margin: '66px 44px',
-          }}
+          className="player-grid"
+          style={
+            game.hostId !== localPlayer.id
+              ? {
+                  paddingBottom: '40px',
+                }
+              : {}
+          }
         >
-          <div
-            className="names"
-            style={{
-              gridAutoColumns: `repeat(5, 100px)`,
-            }}
-          >
-            {/* {names.map((hostname, index) => (
-              <hostcomponent key={index} i={index} name={hostname} />
-            ))} */}
-            {names.map((name, index) => (
-              <div key={index}>
-                {index === 0 ? (
-                  <HostComponent name={name} />
-                ) : (
-                  <NameComponent key={index} i={index} name={name} />
-                )}
-              </div>
+          {players &&
+            players.map((player) => (
+              <Player
+                name={player.name}
+                handleKick={() => handleKick(player)}
+                key={player.id}
+                showKick={
+                  game.hostId === localPlayer.id && player.id !== localPlayer.id
+                }
+              />
             ))}
+        </div>
+        {game.hostId === localPlayer.id && (
+          <button
+            className="start-game"
+            onClick={handleStartGame}
+            disabled={players.length < 2}
+          >
+            Start Game
+          </button>
+        )}
+      </div>
+      <button className="lobby-leave" onClick={handleLeave}>
+        Leave
+      </button>
+      {kickPlayer && <div className="popup-fade" />}
+      {kickPlayer && (
+        <div className="popup center-absolute">
+          <h2>Kick {kickPlayer.name}?</h2>
+          <div className="popup-buttons">
+            <button onClick={() => setKickPlayer(null)}>Cancel</button>
+            <button onClick={() => kick(kickPlayer.id)}>Kick</button>
           </div>
         </div>
-        <button className="start-game">Start Game</button>
-      </div>
-      <button className="leave">Leave</button>
+      )}
     </div>
   );
-
-  // return <div>Lobby</div>;
 }
-// const HostComponent = ({ props }) => {
-function HostComponent(props) {
-  const { i, name, handleCheckboxChange } = props;
 
-  const ProfilePicture = () => {
-    return (
-      <div className="profile-picture">
-        <FontAwesomeIcon icon={faUser} size="4x" />
-      </div>
-    );
+// TODO: add host icon (crown)
+function Player({ name, handleKick, showKick = true }) {
+  Player.propTypes = {
+    name: PropTypes.string.isRequired,
+    handleKick: PropTypes.func.isRequired,
+    showKick: PropTypes.bool,
   };
 
   return (
-    <div className="side-by-side">
-      <PlayerAvatar playerName={name} />
-      <span className="playersnames">{name}</span>
-    </div>
-  );
-}
-function NameComponent(props) {
-  const { i, name, handleCheckboxChange } = props;
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  //   Esxit button
-  const handleXClick = () => {
-    // Perform exit action here
-    setIsModalVisible(false);
-  };
-
-  const ProfilePicture = () => {
-    return (
-      <div className="profile-picture">
-        <FontAwesomeIcon icon={faUser} size="4x" />
+    <div className="player">
+      <PlayerAvatar playerName={name} sizeInPixels={100} />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'row',
+          marginTop: '12px',
+        }}
+      >
+        <p
+          style={
+            showKick
+              ? null
+              : {
+                  marginRight: '0',
+                }
+          }
+        >
+          {name}
+        </p>
+        {showKick && (
+          <Close
+            onClick={handleKick}
+            style={{
+              color: 'var(--primary-color)',
+              fontSize: '1.4em',
+              minWidth: '1.4em',
+              cursor: 'pointer',
+            }}
+          />
+        )}
       </div>
-    );
-  };
-
-  return (
-    <div className="side-by-side">
-      <PlayerAvatar playerName={name} />
-      <span className="playersnames">{name}</span>
-
-      <button className="leave-button" onClick={handleXClick}>
-        X
-      </button>
-
-      {/* <button onClick={() => setIsModalVisible(true)}></button> */}
     </div>
   );
 }
 
-// Hook
-function useWindowSize() {
-  // Initialize state with undefined width/height so server and client renders match
-  // Learn more here: https://joshwcomeau.com/react/the-perils-of-rehydration/
-  const [windowSize, setWindowSize] = useState({
-    width: undefined,
-    height: undefined,
-  });
-  useEffect(() => {
-    // Handler to call on window resize
-    function handleResize() {
-      // Set window width/height to state
-      setWindowSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    }
-    // Add event listener
-    window.addEventListener('resize', handleResize);
-    // Call handler right away so state gets updated with initial window size
-    handleResize();
-    // Remove event listener on cleanup
-    return () => window.removeEventListener('resize', handleResize);
-  }, []); // Empty array ensures that effect is only run on mount
-  return windowSize;
-}
+// TODO: implement
+function handleStart() {}
+
+// TODO: implement
+function handleCopy() {}
 
 export default Lobby;
