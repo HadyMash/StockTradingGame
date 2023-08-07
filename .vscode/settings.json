@@ -21,5 +21,8 @@
     "SMBL",
     "STONKS",
     "TSLA"
-  ]
+  ],
+  "[ignore]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
+  }
 }
