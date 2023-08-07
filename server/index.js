@@ -87,7 +87,7 @@ app.post('/create-new-game', async (req, res) => {
       maxPlayers
     );
 
-    console.log(gameSettings.toObject());
+    // console.log(gameSettings.toObject());
 
     const stockStartIds = {};
     const symbols = Object.keys(db.stockEntryCount);
@@ -101,7 +101,7 @@ app.post('/create-new-game', async (req, res) => {
       stockStartIds[symbol] = symbolId;
     }
 
-    console.log(stockStartIds);
+    // console.log(stockStartIds);
 
     if (stockStartIds.length === 0) {
       res.status(500).json({
@@ -338,7 +338,7 @@ app.post('/remove-player', async (req, res) => {
       return;
     }
 
-    console.log(response);
+    // console.log(response);
 
     if (response.statusCode === 204) {
       console.log('game deleted, 204');
@@ -727,7 +727,7 @@ app.get('/update', async (req, res) => {
 
     const { statusCode, resource } = await db.getGame(gameId);
     if (statusCode !== 200) {
-      console.log();
+      console.log(statusCode, resource);
       res.status(statusCode).json({
         error: resource,
       });
