@@ -1,7 +1,8 @@
-import { setTimeout } from 'timers/promises';
 import { CosmosClient } from '@azure/cosmos';
 import { Player } from '../player.mjs';
-import { Game, GameSettings, GameState } from '../game.mjs';
+import { Game, GameState } from '../game.mjs';
+
+// TODO: cache recently read market data to avoid unnecessary reads
 
 // TODO: avoid hard coding later
 export const stockEntryCount = {
