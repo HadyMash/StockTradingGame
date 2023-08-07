@@ -222,7 +222,6 @@ app.post('/create-new-game', async (req, res) => {
     const game = response.resource;
 
     res.status(201).json({
-      // TODO: send game settings
       game: {
         id: response.resource.id,
         settings: response.resource.gameSettings,
@@ -273,7 +272,7 @@ app.post('/join-game', async (req, res) => {
       return;
     }
 
-    res.status(201).json({
+    res.status(200).json({
       game: {
         id: response.resource.id,
         settings: response.resource.gameSettings,
@@ -349,7 +348,7 @@ app.post('/remove-player', async (req, res) => {
 
     const players = response.resource.players;
 
-    res.status(201).json({
+    res.status(200).json({
       hostId: response.resource.hostId,
       gameState: response.resource.state,
       startTimestamp: response.resource.startTimestamp,
@@ -377,10 +376,84 @@ app.post('/start-game', async (req, res) => {
   try {
     const gameId = req.body.gameId;
     const playerId = req.body.playerId;
+
+    if (!gameId) {
+      res.status(400).json({
+        error: 'Missing game id',
+      });
+      return;
+    }
+
+    if (!playerId) {
+      res.status(400).json({
+        error: 'Missing player id',
+      });
+      return;
+    }
+
     const response = await db.startGame(gameId, playerId);
+
+    const dayNumber = 0;
+    const stockData = new Array(20);
+
+    // for each symbol
+    for (let i = 0; i < Object.keys(game.stockStartIds).length; i++) {
+      const symbol = Object.keys(game.stockStartIds)[i];
+      // console.log('starting', symbol);
+      // get prices from start id to current day + a buffer of 20 days
+      const rawEntries = await db.getMarketDataEntries(
+        symbol,
+        game.stockStartIds[symbol],
+        // TODO: replace all + 20 with a constant
+        dayNumber + 20
+      );
+      // console.log('raw entries', rawEntries);
+      // for each day
+      for (let j = 0; j < rawEntries.length; j++) {
+        const entry = rawEntries[j];
+        if (entry.statusCode !== 200) {
+          throw new Error(entry.resourceBody);
+        }
+
+        const body = entry.resourceBody;
+        if (!stockData[j]) {
+          stockData[j] = {};
+        }
+        // add anonymised data to stock data
+        stockData[j][symbol] = {
+          id: j,
+          symbol: symbol,
+          price: body.price,
+          volume: body.volume,
+        };
+      }
+    }
+
     res.status(200).json({
-      success: true,
-      message: 'Game started successfully',
+      game: {
+        state: response.resource.state,
+        players: [
+          ...Object.keys(response.resource.players)
+            .filter((id) => id !== playerId)
+            .map((playerId) => {
+              // calculate player's net worth
+              let netWorth = resource.settings.startingMoney;
+              return {
+                id: playerId,
+                name: game.players[playerId].name,
+                netWorth: netWorth,
+              };
+            }),
+          {
+            id: 'ai',
+            name: 'AI',
+            netWorth: resource.settings.startingMoney,
+          },
+        ],
+        resource,
+      },
+      player: resource.players[playerId],
+      stockData: stockData,
     });
   } catch (err) {
     console.error(err);
@@ -392,40 +465,120 @@ app.post('/start-game', async (req, res) => {
   }
 });
 
-// app.post('/endGame', async (req, res) => {
-//   try {
-//     const gameId = req.body.gameId;
-//     const response = await db.endGame(gameId);
-//     res.status(200).json({
-//       success: true,
-//       message: 'Game ended successfully',
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Failed to end game',
-//       error: err.message,
-//     });
-//   }
-// });
-
 app.post('/buy', async (req, res) => {
   try {
     const symbol = req.body.symbol;
     const quantity = req.body.quantity;
     const gameId = req.body.gameId;
     const playerId = req.body.playerId;
+
+    if (!symbol) {
+      res.status(400).json({
+        error: 'Missing symbol',
+      });
+      return;
+    }
+    if (!quantity) {
+      res.status(400).json({
+        error: 'Missing quantity',
+      });
+      return;
+    }
+    if (!gameId) {
+      res.status(400).json({
+        error: 'Missing game id',
+      });
+      return;
+    }
+    if (!playerId) {
+      res.status(400).json({
+        error: 'Missing player id',
+      });
+      return;
+    }
+
     const response = await db.buyStock(gameId, playerId, symbol, quantity);
-    res.status(201).json({
-      success: true,
-      message: 'Stock bought successfully',
+    if (response.statusCode !== 200) {
+      const error = response.resource ?? response;
+      res.status(response.statusCode).json({
+        error: error,
+      });
+      return;
+    }
+
+    const dayNumber = Math.floor(
+      (Date.now() - response.resource.startTimestamp) /
+        1000 /
+        response.resource.settings.roundDurationSeconds
+    );
+
+    const stockData = {};
+    for (
+      let i = 0;
+      i < Object.keys(response.resource.stockStartIds).length;
+      i++
+    ) {
+      const symbol = Object.keys(response.resource.stockStartIds)[i];
+      const marketResponse = await db.getMarketDataEntry(
+        symbol,
+        response.resource.stockStartIds[symbol] + dayNumber + 20
+      );
+      if (marketResponse.statusCode !== 200) {
+        throw new Error(marketResponse.resourceBody);
+      }
+      stockData[symbol] = marketResponse.resource;
+      console.log(`${symbol}:`, stockData[symbol]);
+    }
+
+    res.status(200).json({
+      gameState: response.resource.state,
+      players: [
+        ...Object.keys(response.resource.players)
+          .filter((id) => id !== playerId)
+          .map((playerId) => {
+            // calculate player's net worth
+            console.log('playerId', playerId);
+            let netWorth = response.resource.players[playerId].money;
+            console.log('netWorth', netWorth);
+            for (
+              let i = 0;
+              i <
+              Object.keys(response.resource.players[playerId].stocks).length;
+              i++
+            ) {
+              const symbol = Object.keys(
+                response.resource.players[playerId].stocks
+              )[i];
+              console.log('symbol', symbol);
+              const quantity =
+                response.resource.players[playerId].stocks[symbol];
+              console.log('quantity', quantity);
+              const price = stockData[symbol].price;
+              console.log('price', price);
+
+              netWorth += quantity * price;
+            }
+            console.log('netWorth', netWorth);
+
+            return {
+              id: playerId,
+              name: response.resource.players[playerId].name,
+              netWorth: netWorth,
+            };
+          }),
+        {
+          id: 'ai',
+          name: 'AI',
+          // TODO: test if day number starts at 0 or 1 (i believe it starts at 0 because of the math floor)
+          netWorth: response.resource.aiNetWorthOverTime[dayNumber],
+        },
+      ],
+      player: response.resource.players[playerId],
     });
   } catch (err) {
-    if (res.status !== 201) {
-      console.error(err);
+    console.error(err);
+    if (res.status !== 200) {
       res.status(500).json({
-        success: false,
         message: 'Stock not bought',
         error: err.message,
       });
@@ -435,25 +588,122 @@ app.post('/buy', async (req, res) => {
 
 app.post('/sell', async (req, res) => {
   try {
-    const gameId = req.body.gameId;
-    const playerId = req.body.playerId;
     const symbol = req.body.symbol;
     const quantity = req.body.quantity;
+    const gameId = req.body.gameId;
+    const playerId = req.body.playerId;
+
+    if (!symbol) {
+      res.status(400).json({
+        error: 'Missing symbol',
+      });
+      return;
+    }
+    if (!quantity) {
+      res.status(400).json({
+        error: 'Missing quantity',
+      });
+      return;
+    }
+    if (!gameId) {
+      res.status(400).json({
+        error: 'Missing game id',
+      });
+      return;
+    }
+    if (!playerId) {
+      res.status(400).json({
+        error: 'Missing player id',
+      });
+      return;
+    }
 
     const response = await db.sellStock(gameId, playerId, symbol, quantity);
-    res.status(201).json({
-      success: true,
-      message: 'Stock sold successfully',
+    if (response.statusCode !== 200) {
+      const error = response.resource ?? response;
+      res.status(response.statusCode).json({
+        error: error,
+      });
+      return;
+    }
+
+    const dayNumber = Math.floor(
+      (Date.now() - response.resource.startTimestamp) /
+        1000 /
+        response.resource.settings.roundDurationSeconds
+    );
+
+    const stockData = {};
+    for (
+      let i = 0;
+      i < Object.keys(response.resource.stockStartIds).length;
+      i++
+    ) {
+      const symbol = Object.keys(response.resource.stockStartIds)[i];
+      const marketResponse = await db.getMarketDataEntry(
+        symbol,
+        response.resource.stockStartIds[symbol] + dayNumber + 20
+      );
+      if (marketResponse.statusCode !== 200) {
+        throw new Error(marketResponse.resourceBody);
+      }
+      stockData[symbol] = marketResponse.resource;
+      console.log(`${symbol}:`, stockData[symbol]);
+    }
+
+    res.status(200).json({
+      gameState: response.resource.state,
+      players: [
+        ...Object.keys(response.resource.players)
+          .filter((id) => id !== playerId)
+          .map((playerId) => {
+            // calculate player's net worth
+            console.log('playerId', playerId);
+            let netWorth = response.resource.players[playerId].money;
+            console.log('netWorth', netWorth);
+            for (
+              let i = 0;
+              i <
+              Object.keys(response.resource.players[playerId].stocks).length;
+              i++
+            ) {
+              const symbol = Object.keys(
+                response.resource.players[playerId].stocks
+              )[i];
+              console.log('symbol', symbol);
+              const quantity =
+                response.resource.players[playerId].stocks[symbol];
+              console.log('quantity', quantity);
+              const price = stockData[symbol].price;
+              console.log('price', price);
+
+              netWorth += quantity * price;
+            }
+            console.log('netWorth', netWorth);
+
+            return {
+              id: playerId,
+              name: response.resource.players[playerId].name,
+              netWorth: netWorth,
+            };
+          }),
+        {
+          id: 'ai',
+          name: 'AI',
+          // TODO: test if day number starts at 0 or 1 (i believe it starts at 0 because of the math floor)
+          netWorth: response.resource.aiNetWorthOverTime[dayNumber],
+        },
+      ],
+      player: response.resource.players[playerId],
     });
-    //res.send(response);
-    console.log(response);
   } catch (err) {
     console.error(err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to sell stock',
-      error: err.message,
-    });
+    if (res.status !== 200) {
+      res.status(500).json({
+        message: 'Stock not bought',
+        error: err.message,
+      });
+    }
   }
 });
 
