@@ -1,6 +1,9 @@
+import { config as dotenvConfig } from 'dotenv';
 import { CosmosClient } from '@azure/cosmos';
 import { Player } from '../player.mjs';
 import { Game, GameState } from '../game.mjs';
+
+dotenvConfig();
 
 // TODO: cache recently read market data to avoid unnecessary reads
 
