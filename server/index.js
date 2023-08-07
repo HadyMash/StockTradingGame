@@ -716,10 +716,10 @@ app.post('/sell', async (req, res) => {
   }
 });
 
-app.get('/update', async (req, res) => {
+app.get('/update/:gameId/:playerId', async (req, res) => {
   try {
-    const gameId = req.body.gameId;
-    const playerId = req.body.playerId;
+    const gameId = req.params.gameId;
+    const playerId = req.params.playerId;
     if (!gameId) {
       res.status(400).json({
         error: 'Missing game id',

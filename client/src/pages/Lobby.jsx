@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import { Close } from '@rsuite/icons';
+import { GameState } from '../../../game.mjs';
 
 function Lobby() {
   const location = useLocation();
@@ -13,7 +14,60 @@ function Lobby() {
   const [kickPlayer, setKickPlayer] = useState(null);
 
   useEffect(() => {
-    // TODO: set interval to poll for players
+    // set interval to poll for players
+    let abortController;
+    const updateIntervalId = setInterval(async () => {
+      abortController = new AbortController();
+      const response = await fetch(
+        `http://localhost:3000/update/${game.id}/${localPlayer.id}`,
+        {
+          signal: abortController.signal,
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // TODO: show error to user
+        }
+      ).catch((err) => console.error(err));
+
+      // handle response
+      try {
+        if (response) {
+          const data = await response.json();
+          console.log(data);
+          if (response.status === 200) {
+            const gameState = data.gameState;
+            if (!gameState) {
+              throw new Error('gameState not found');
+            }
+            if (gameState == GameState.waiting) {
+              // lobby
+              setPlayers(data.players);
+              setGame((previousGame) => {
+                return {
+                  ...previousGame,
+                  hostId: data.hostId,
+                };
+              });
+            } else if (gameState == GameState.inProgress) {
+              // TODO: route to game
+            } else {
+              // TODO: route to scoreboard
+            }
+          } else {
+            console.log('error:', response.status, data);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        // TODO: show error to user
+      }
+    }, 2000);
+
+    return () => {
+      abortController?.abort();
+      clearInterval(updateIntervalId);
+    };
   }, []);
 
   function handleKick(player) {
