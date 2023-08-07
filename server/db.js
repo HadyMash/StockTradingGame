@@ -5,7 +5,7 @@ import { Game, GameState } from '../game.mjs';
 // TODO: cache recently read market data to avoid unnecessary reads
 
 // TODO: avoid hard coding later
-const stockEntryCount = {
+export const stockEntryCount = {
   AAPL: 5910,
   AMZN: 5910,
   MSFT: 5920,
@@ -19,7 +19,7 @@ const stockEntryCount = {
  * @param {number} buffer - a buffer in case you need to show buffer days before the game starts
  * @returns
  */
-function getRandomSymbolId(symbol, maxGameDuration, buffer = 0) {
+export function getRandomSymbolId(symbol, maxGameDuration, buffer = 0) {
   if (!symbol || !stockEntryCount[symbol]) {
     throw new Error('Invalid symbol');
   }
@@ -259,7 +259,12 @@ export async function getGame(id) {
  * @param {Player} host (Player)
  * @returns {Game} the created game (Game)
  */
-export async function createNewGame(hostName, gameSettings, stockStartIds) {
+export async function createNewGame(
+  hostName,
+  gameSettings,
+  stockStartIds,
+  aiNetWorthOverTime
+) {
   // create player
   const player = new Player(
     Player.generateId(),
@@ -279,9 +284,11 @@ export async function createNewGame(hostName, gameSettings, stockStartIds) {
     player.id
   );
   try {
-    var { statusCode, resource } = await gamesContainer.items.create(
-      game.toObject()
-    );
+    const gameObj = game.toObject();
+    if (aiNetWorthOverTime.length == gameSettings.maxGameTurns) {
+      gameObj.aiNetWorthOverTime = aiNetWorthOverTime;
+    }
+    var { statusCode, resource } = await gamesContainer.items.create(gameObj);
     return {
       statusCode: statusCode,
       player: player.toObject(),
@@ -337,11 +344,11 @@ export async function addPlayerToGame(gameId, playerName) {
   } catch (error) {
     return {
       statusCode: statusCode,
-      error: error.toObject(),
+      error: error,
     };
   }
 }
-// TODO: remove player from game
+
 /**
  * Removes a player from a game
  * @param {string} gameId - the id of the game (string)
@@ -361,11 +368,36 @@ export async function removePlayerFromGame(gameId, playerId, requestId) {
   if (!game.players[playerId]) {
     throw new Error('Player not found');
   }
+  if (game.state !== GameState.waiting) {
+    throw new Error('Game has already started');
+  }
+
   const operations = [{ op: 'remove', path: `/players/${playerId}` }];
+
+  if (game.hostId === playerId) {
+    console.log('host is leaving');
+    // if the host is leaving, promote a new host
+    const filteredIds = Object.keys(game.players).filter(
+      (id) => id != game.hostId
+    );
+    if (filteredIds.length > 0) {
+      const newHostId = filteredIds[0];
+      operations.push({ op: 'replace', path: '/hostId', value: newHostId });
+    }
+  }
+
   try {
     var { statusCode, resource } = await gamesContainer
       .item(gameId.toString(), gameId.toString())
       .patch(operations);
+
+    if (Object.keys(resource.players).length === 0) {
+      console.log('no players left, deleting game');
+      console.log(await deleteGame(gameId));
+      return {
+        statusCode: 204,
+      };
+    }
 
     return {
       statusCode: statusCode,
@@ -374,7 +406,7 @@ export async function removePlayerFromGame(gameId, playerId, requestId) {
   } catch (error) {
     return {
       statusCode: statusCode,
-      error: error.toObject(),
+      error: error,
     };
   }
 }
@@ -424,7 +456,7 @@ export async function startGame(gameId, playerId) {
  * Sets the game's state to GameState.finished
  */
 export async function endGame(gameId) {
-  return await setGameState(gameId, GameState.ended);
+  return await setGameState(gameId, GameState.finished);
 }
 
 /**
@@ -492,6 +524,15 @@ export async function sellStock(gameId, playerId, symbol, quantity) {
  * @returns
  */
 async function getTransactionInfo(gameId, playerId, symbol, quantity) {
+  if (!gameId) {
+    throw new Error('Invalid gameId');
+  }
+  if (!playerId) {
+    throw new Error('Invalid playerId');
+  }
+  if (!quantity) {
+    throw new Error('Invalid quantity');
+  }
   const { statusCode: gameStatusCode, resource: gameResource } = await getGame(
     gameId
   );
@@ -499,6 +540,10 @@ async function getTransactionInfo(gameId, playerId, symbol, quantity) {
     throw new Error(`Game ${gameId} not found`);
   }
   const game = Game.fromObject(gameResource);
+
+  if (!symbol || !game.stockStartIds[symbol]) {
+    throw new Error('Invalid symbol');
+  }
 
   if (game.state !== GameState.active) {
     throw new Error(`Game ${gameId} is not active`);
@@ -539,5 +584,14 @@ async function getTransactionInfo(gameId, playerId, symbol, quantity) {
     numOfStocks: numOfStocks,
     playerMoney: playerMoney,
     operations: operations,
+  };
+}
+
+async function deleteGame(gameId) {
+  const { statusCode } = await gamesContainer
+    .item(gameId.toString(), gameId.toString())
+    .delete();
+  return {
+    statusCode: statusCode,
   };
 }
