@@ -1,8 +1,8 @@
 **/.DS_STORE
-.env
-**/.env
-.env.test
-**/.env.test
+*.env
+**/*.env
+*.env.test
+**/*.env.test
 # Logs
 logs
 *.log
