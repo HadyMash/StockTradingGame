@@ -12,6 +12,7 @@ function Lobby() {
   const localPlayer = location.state.player;
   const [players, setPlayers] = useState(location.state.game.players);
   const [kickPlayer, setKickPlayer] = useState(null);
+  const [loadingStartGame, setLoadingStartGame] = useState(false);
 
   useEffect(() => {
     // set interval to poll for players
@@ -49,8 +50,18 @@ function Lobby() {
               };
             });
 
-            if (gameState == GameState.inProgress) {
-              // TODO: route to game
+            if (gameState == GameState.active) {
+              navigate(`/game/${game.id}`, {
+                state: {
+                  game: {
+                    ...game,
+                    hostId: data.hostId,
+                  },
+                  players: data.players,
+                  localPlayer,
+                  stockData: data.stockData,
+                },
+              });
             } else {
               // TODO: route to scoreboard
             }
@@ -120,8 +131,18 @@ function Lobby() {
             hostId: data.hostId,
           };
         });
-        if (gameState == GameState.inProgress) {
-          // TODO: route to game
+        if (gameState == GameState.active) {
+          navigate(`/game/${game.id}`, {
+            state: {
+              game: {
+                ...game,
+                hostId: data.hostId,
+              },
+              players: data.players,
+              localPlayer,
+              stockData: data.stockData,
+            },
+          });
         } else {
           // TODO: route to scoreboard
         }
@@ -140,8 +161,63 @@ function Lobby() {
     // TODO: leave api call
   }
 
-  function handleStartGame() {
-    // TODO: start game api call
+  async function handleStartGame() {
+    setLoadingStartGame(true);
+    const response = await fetch('http://localhost:3000/start-game', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        gameId: game.id,
+        playerId: localPlayer.id,
+      }),
+      // TODO: show error to user
+    }).catch((err) => console.error(err));
+
+    try {
+      if (!response) {
+        throw new Error('no response');
+      }
+      const data = await response.json();
+      console.log(data);
+
+      if (response.status === 200) {
+        const gameState = data.gameState;
+        if (!gameState) {
+          throw new Error('gameState not found');
+        }
+        setPlayers(data.players);
+        setGame((previousGame) => {
+          return {
+            ...previousGame,
+            hostId: data.hostId,
+          };
+        });
+        if (gameState == GameState.active) {
+          navigate(`/game/${game.id}`, {
+            state: {
+              game: {
+                ...game,
+                hostId: data.hostId,
+              },
+              players: data.players,
+              localPlayer,
+              stockData: data.stockData,
+            },
+          });
+        } else {
+          // TODO: route to scoreboard
+        }
+      } else {
+        console.log('error:', response.status, data);
+      }
+    } catch (error) {
+      console.error(error);
+      // TODO: show error to user
+    } finally {
+      setLoadingStartGame(false);
+    }
   }
 
   return (
@@ -180,9 +256,10 @@ function Lobby() {
           <button
             className="start-game"
             onClick={handleStartGame}
-            disabled={players.length < 2}
+            disabled={players.length < 2 || loadingStartGame}
           >
-            Start Game
+            {/* // TODO: consider replacing loading text with rsuite spinner */}
+            {loadingStartGame ? 'Loading...' : 'Start Game'}
           </button>
         )}
       </div>

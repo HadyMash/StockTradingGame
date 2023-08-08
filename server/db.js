@@ -320,6 +320,9 @@ export async function addPlayerToGame(gameId, playerName) {
   if (Object.keys(game.players).length >= game.settings.maxPlayers) {
     throw new Error('Game is full');
   }
+  if (game.state !== 'waiting') {
+    throw new Error('Game has already started');
+  }
 
   {
     var id;
@@ -450,6 +453,9 @@ export async function startGame(gameId, playerId) {
   }
   if (Object.keys(game.players).length < 2) {
     throw new Error('Not enough players');
+  }
+  if (game.state !== GameState.waiting) {
+    throw new Error('Game has already started');
   }
 
   return await setGameState(gameId, GameState.active);

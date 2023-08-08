@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Dropdown, Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import {
@@ -17,79 +18,37 @@ import { Minus, ArrowDownLine, ArrowUpLine } from '@rsuite/icons';
 // TODO: get code from memory router params and url as fallback
 // TODO: make game page responsive
 function Game() {
-  // ! temp
-  const [data, setData] = React.useState([
-    { id: 1, stock: 'SMBL', price: 100 },
-    { id: 2, stock: 'SMBL', price: 101 },
-    { id: 3, stock: 'SMBL', price: 80 },
-    { id: 4, stock: 'SMBL', price: 102 },
-    { id: 5, stock: 'SMBL', price: 98 },
-    { id: 6, stock: 'SMBL', price: 103 },
-    { id: 7, stock: 'SMBL', price: 97 },
-    { id: 8, stock: 'SMBL', price: 104 },
-    { id: 9, stock: 'SMBL', price: 96 },
-    { id: 10, stock: 'SMBL', price: 105 },
-    { id: 11, stock: 'SMBL', price: 95 },
-    { id: 12, stock: 'SMBL', price: 106 },
-    { id: 13, stock: 'SMBL', price: 94 },
-    { id: 14, stock: 'SMBL', price: 107 },
-    { id: 15, stock: 'SMBL', price: 93 },
-    { id: 16, stock: 'SMBL', price: 108 },
-    { id: 17, stock: 'SMBL', price: 92 },
-    { id: 18, stock: 'SMBL', price: 109 },
-    { id: 19, stock: 'SMBL', price: 91 },
-    { id: 20, stock: 'SMBL', price: 110 },
-    { id: 21, stock: 'SMBL', price: 105 },
-    { id: 22, stock: 'SMBL', price: 102 },
-    { id: 23, stock: 'SMBL', price: 95 },
-    { id: 24, stock: 'SMBL', price: 98 },
-    { id: 25, stock: 'SMBL', price: 100 },
-    { id: 26, stock: 'SMBL', price: 103 },
-    { id: 27, stock: 'SMBL', price: 110 },
-    { id: 28, stock: 'SMBL', price: 101 },
-    { id: 29, stock: 'SMBL', price: 96 },
-    { id: 30, stock: 'SMBL', price: 108 },
-    { id: 31, stock: 'SMBL', price: 94 },
-    { id: 32, stock: 'SMBL', price: 97 },
-    { id: 33, stock: 'SMBL', price: 109 },
-    { id: 34, stock: 'SMBL', price: 92 },
-    { id: 35, stock: 'SMBL', price: 103 },
-    { id: 36, stock: 'SMBL', price: 101 },
-    { id: 37, stock: 'SMBL', price: 99 },
-    { id: 38, stock: 'SMBL', price: 96 },
-    { id: 39, stock: 'SMBL', price: 104 },
-    { id: 40, stock: 'SMBL', price: 95 },
-  ]);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [game, setGame] = React.useState(location.state.game);
+  const [players, setPlayers] = React.useState(location.state.players);
+  const [localPlayer, setLocalPlayer] = React.useState(
+    location.state.localPlayer
+  );
+  const [stockData, setStockData] = React.useState(location.state.stockData);
+  const symbols = Object.keys(location.state.stockData[0]);
+  const [selectedSymbol, setSelectedSymbol] = React.useState(symbols[0]);
 
   return (
     <div className="game-grid">
       <div className="panel chart">
         <Chart
-          selectedSymbol="SMBL"
-          symbols={['SMBL', 'MSFT']}
-          setSymbol={(symbol) => console.log(symbol)}
-          data={data}
+          selectedSymbol={selectedSymbol}
+          symbols={symbols}
+          setSymbol={setSelectedSymbol}
+          data={stockData}
         />
       </div>
       <div className="panel account">
         <Account
-          money={300}
-          holdings={{
-            SMBL: {
-              quantity: 1,
-              value: 100.12,
-            },
-            MSFT: {
-              quantity: 2,
-              value: 285.24,
-            },
-          }}
-          // TODO: add setSymbol function
-          setSymbol={(symbol) => console.log(symbol)}
+          money={localPlayer.money}
+          holdings={localPlayer.stocks}
+          setSymbol={setSelectedSymbol}
+          latestStockData={stockData[stockData.length - 1]}
         />
       </div>
       <div className="panel">
-        <Players />
+        <Players localPlayer={localPlayer} players={players} />
       </div>
     </div>
   );
@@ -106,6 +65,14 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
   const [domain, setDomain] = React.useState({ x: [0, 20] });
   const [graphDimensions, setGraphDimensions] = React.useState(null);
   const graphRef = useRef(null);
+
+  const symbolData = data.map((obj) => {
+    return {
+      id: obj[selectedSymbol].id,
+      price: obj[selectedSymbol].price,
+      volume: obj[selectedSymbol].volume,
+    };
+  });
 
   // https://stackoverflow.com/a/68609331/21266350
   useEffect(() => {
@@ -124,12 +91,15 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []); // Empty array ensures that effect is only run on mount
 
-  const { maxPrice, minPrice } = data.reduce(
+  const { maxPrice, minPrice } = symbolData.reduce(
     ({ maxPrice, minPrice }, obj) => ({
       maxPrice: obj.price > maxPrice ? obj.price : maxPrice,
       minPrice: obj.price < minPrice ? obj.price : minPrice,
     }),
-    { maxPrice: data[0]?.price || null, minPrice: data[0]?.price || null }
+    {
+      maxPrice: symbolData[0]?.price || null,
+      minPrice: symbolData[0]?.price || null,
+    }
   );
 
   function panGraph(e) {
@@ -139,8 +109,8 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
       if (currentDomain.x[0] + delta < 0) {
         delta = -currentDomain.x[0];
       }
-      if (currentDomain.x[1] + delta > data.length) {
-        delta = data.length - currentDomain.x[1] + 2;
+      if (currentDomain.x[1] + delta > symbolData.length) {
+        delta = symbolData.length - currentDomain.x[1] + 2;
       }
 
       return {
@@ -173,7 +143,7 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
           }
         >
           <VictoryLine
-            data={data}
+            data={symbolData}
             x="id"
             y="price"
             // TODO: fix scuffed animation
@@ -181,7 +151,7 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
             //   onEnter: {
             //     duration: 500,
             //     before: () => ({
-            //       _y: data[data.length - 2].price || 0,
+            //       _y: symbolData[symbolData.length - 2].price || 0,
             //     }),
             //   },
             // }}
@@ -227,11 +197,12 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
   );
 }
 
-function Account({ money, holdings, setSymbol }) {
+function Account({ money, holdings, setSymbol, latestStockData }) {
   Account.propTypes = {
     money: PropTypes.number.isRequired,
     holdings: PropTypes.objectOf(PropTypes.object).isRequired,
     setSymbol: PropTypes.func.isRequired,
+    latestStockData: PropTypes.object.isRequired,
   };
 
   return (
@@ -240,7 +211,11 @@ function Account({ money, holdings, setSymbol }) {
         <h1>Account</h1>
         <h1>${money}</h1>
       </div>
-      <Holdings holdings={holdings} setSymbol={setSymbol} />
+      <Holdings
+        holdings={holdings}
+        setSymbol={setSymbol}
+        latestStockData={latestStockData}
+      />
       <Trade
         symbol={'SMBL'}
         moneyAvailable={1000}
@@ -251,10 +226,11 @@ function Account({ money, holdings, setSymbol }) {
   );
 }
 
-function Holdings({ holdings, setSymbol }) {
+function Holdings({ holdings, setSymbol, latestStockData }) {
   Holdings.propTypes = {
     holdings: PropTypes.objectOf(PropTypes.object).isRequired,
     setSymbol: PropTypes.func.isRequired,
+    latestStockData: PropTypes.object.isRequired,
   };
 
   return (
@@ -268,7 +244,7 @@ function Holdings({ holdings, setSymbol }) {
             key={symbol}
             symbol={symbol}
             quantity={holdings[symbol].quantity}
-            value={holdings[symbol].value}
+            value={holdings[symbol].quantity * latestStockData[symbol].price}
             setSymbol={setSymbol}
           />
         ))}
@@ -421,9 +397,16 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
   );
 }
 
-function Players() {
+function Players({ localPlayer, players }) {
+  Players.propTypes = {
+    localPlayer: PropTypes.object.isRequired,
+    players: PropTypes.arrayOf(PropTypes.object).isRequired,
+  };
+
   const [showStartFade, setShowStartFade] = React.useState(false);
   const [showEndFade, setShowEndFade] = React.useState(true);
+
+  const aiIndex = players.findIndex((player) => player.id === 'ai');
 
   return (
     <div className="players-parent">
@@ -442,125 +425,33 @@ function Players() {
         }}
       >
         <Player
-          playerName={'Player 1'}
-          playerMoney={1000}
-          prevPlayerMoney={100}
+          key={localPlayer.id}
+          playerName={localPlayer.name}
+          playerMoney={localPlayer.money}
+          prevPlayerMoney={localPlayer.money}
         />
         <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
+          key={players[aiIndex].id}
+          playerName={players[aiIndex].name}
+          playerMoney={players[aiIndex].netWorth}
+          prevPlayerMoney={players[aiIndex].netWorth}
         />
-        <Player
-          playerName={'Player 3'}
-          playerMoney={1000}
-          prevPlayerMoney={1000}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
-        <Player
-          playerName={'Player 2'}
-          playerMoney={1000}
-          prevPlayerMoney={1100}
-        />
+        {
+          // TODO: cache to avoid redundant computation
+          // TODO: implement previous money
+          players
+            .filter(
+              (player) => player.id !== localPlayer.id && player.id !== 'ai'
+            )
+            .map((player) => (
+              <Player
+                key={player.id}
+                playerName={player.name}
+                playerMoney={player.netWorth}
+                prevPlayerMoney={player.netWorth}
+              />
+            ))
+        }
       </div>
       <div className={showStartFade ? 'start-fade2' : undefined}></div>
       <div className={showEndFade ? 'end-fade2' : undefined}></div>

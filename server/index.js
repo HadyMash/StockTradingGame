@@ -411,9 +411,11 @@ app.post('/start-game', async (req, res) => {
     }
 
     const response = await db.startGame(gameId, playerId);
+    console.log(response);
 
     const dayNumber = 0;
     const stockData = new Array(20);
+    const game = response.resource;
 
     // for each symbol
     for (let i = 0; i < Object.keys(game.stockStartIds).length; i++) {
@@ -449,27 +451,25 @@ app.post('/start-game', async (req, res) => {
     }
 
     res.status(200).json({
-      game: {
-        state: response.resource.state,
-        players: [
-          ...Object.keys(response.resource.players).map((playerId) => {
-            // calculate player's net worth
-            let netWorth = resource.settings.startingMoney;
-            return {
-              id: playerId,
-              name: game.players[playerId].name,
-              netWorth: netWorth,
-            };
-          }),
-          {
-            id: 'ai',
-            name: 'AI',
-            netWorth: resource.settings.startingMoney,
-          },
-        ],
-        resource,
-      },
-      player: resource.players[playerId],
+      gameState: game.state,
+      players: [
+        ...Object.keys(game.players).map((playerId) => {
+          // calculate player's net worth
+          let netWorth = game.settings.startingMoney;
+          return {
+            id: playerId,
+            name: game.players[playerId].name,
+            netWorth: netWorth,
+          };
+        }),
+        {
+          id: 'ai',
+          name: 'AI',
+          netWorth: game.settings.startingMoney,
+        },
+      ],
+      hostId: game.hostId,
+      player: game.players[playerId],
       stockData: stockData,
     });
   } catch (err) {
@@ -837,6 +837,7 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
           },
         ],
         player: game.players[playerId],
+        hostId: game.hostId,
         stockData: stockData,
       };
       // console.log('response', response);
