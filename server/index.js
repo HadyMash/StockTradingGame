@@ -227,8 +227,6 @@ app.post('/create-new-game', async (req, res) => {
       aiNetWorthOverTime
     );
 
-    console.log(response);
-
     if (response.statusCode !== 201) {
       res.status(response.statusCode).json({
         error: response.error,
@@ -241,10 +239,9 @@ app.post('/create-new-game', async (req, res) => {
     res.status(201).json({
       game: {
         id: game.id,
-        settings: game.gameSettings,
+        settings: game.settings,
         state: game.state,
         hostId: game.hostId,
-        stocks: Object.keys(game.stockStartIds),
         players: Object.keys(game.players).map((playerId) => {
           return {
             id: playerId,
@@ -286,8 +283,6 @@ app.post('/join-game', async (req, res) => {
 
     const response = await db.addPlayerToGame(gameId, playerName);
 
-    console.log(response);
-
     if (response.statusCode !== 200) {
       res.status(response.statusCode).json({
         error: response.error,
@@ -298,10 +293,9 @@ app.post('/join-game', async (req, res) => {
     res.status(200).json({
       game: {
         id: response.resource.id,
-        settings: response.resource.gameSettings,
+        settings: response.resource.settings,
         state: response.resource.state,
         hostId: response.resource.hostId,
-        stocks: Object.keys(response.resource.stockStartIds),
         players: Object.keys(response.resource.players).map((playerId) => {
           return {
             id: playerId,
@@ -312,7 +306,6 @@ app.post('/join-game', async (req, res) => {
       },
       player: response.player,
     });
-    console.log(response);
   } catch (err) {
     console.error(err);
     res.status(500).json({
@@ -414,6 +407,7 @@ app.post('/start-game', async (req, res) => {
 
     const dayNumber = 0;
     const stockData = new Array(20);
+    const game = response.resource;
 
     // for each symbol
     for (let i = 0; i < Object.keys(game.stockStartIds).length; i++) {
@@ -449,27 +443,25 @@ app.post('/start-game', async (req, res) => {
     }
 
     res.status(200).json({
-      game: {
-        state: response.resource.state,
-        players: [
-          ...Object.keys(response.resource.players).map((playerId) => {
-            // calculate player's net worth
-            let netWorth = resource.settings.startingMoney;
-            return {
-              id: playerId,
-              name: game.players[playerId].name,
-              netWorth: netWorth,
-            };
-          }),
-          {
-            id: 'ai',
-            name: 'AI',
-            netWorth: resource.settings.startingMoney,
-          },
-        ],
-        resource,
-      },
-      player: resource.players[playerId],
+      gameState: game.state,
+      players: [
+        ...Object.keys(game.players).map((playerId) => {
+          // calculate player's net worth
+          let netWorth = game.settings.startingMoney;
+          return {
+            id: playerId,
+            name: game.players[playerId].name,
+            netWorth: netWorth,
+          };
+        }),
+        {
+          id: 'ai',
+          name: 'AI',
+          netWorth: game.settings.startingMoney,
+        },
+      ],
+      hostId: game.hostId,
+      player: game.players[playerId],
       stockData: stockData,
     });
   } catch (err) {
@@ -837,6 +829,7 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
           },
         ],
         player: game.players[playerId],
+        hostId: game.hostId,
         stockData: stockData,
       };
       // console.log('response', response);
