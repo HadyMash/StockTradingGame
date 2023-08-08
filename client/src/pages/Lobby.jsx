@@ -76,8 +76,8 @@ function Lobby() {
     }, 2000);
 
     return () => {
-      abortController?.abort();
       clearInterval(updateIntervalId);
+      abortController?.abort();
     };
   }, []);
 

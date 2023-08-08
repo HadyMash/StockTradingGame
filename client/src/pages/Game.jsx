@@ -12,6 +12,7 @@ import {
 import TextInput from '../shared/TextInput';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import { Minus, ArrowDownLine, ArrowUpLine } from '@rsuite/icons';
+import { GameState } from '../../../game.mjs';
 
 // TODO: see where i can replace state with refs
 
@@ -22,12 +23,123 @@ function Game() {
   const navigate = useNavigate();
   const [game, setGame] = React.useState(location.state.game);
   const [players, setPlayers] = React.useState(location.state.players);
-  const [localPlayer, setLocalPlayer] = React.useState(
+  const [localPlayer, _setLocalPlayer] = React.useState(
+    location.state.localPlayer
+  );
+  function setLocalPlayer(newLocalPlayer) {
+    setPreviousLocalPlayer(localPlayer);
+    _setLocalPlayer(newLocalPlayer);
+  }
+  const [previousLocalPlayer, setPreviousLocalPlayer] = React.useState(
     location.state.localPlayer
   );
   const [stockData, setStockData] = React.useState(location.state.stockData);
   const symbols = Object.keys(location.state.stockData[0]);
   const [selectedSymbol, setSelectedSymbol] = React.useState(symbols[0]);
+  const [timeRemainingForDay, setTimeRemainingForDay] = React.useState(
+    game.settings.roundDurationSeconds
+  );
+
+  useEffect(() => {
+    console.log(
+      'game',
+      game,
+      'players',
+      players,
+      'localPlayer',
+      localPlayer,
+      'stockData',
+      stockData,
+      'symbols',
+      symbols,
+      'selectedSymbol',
+      selectedSymbol,
+      'timeRemainingForDay',
+      timeRemainingForDay
+    );
+  }, []);
+
+  useEffect(() => {
+    let abortController;
+    const updateIntervalId = setInterval(async () => {
+      abortController = new AbortController();
+      const response = await fetch(
+        `http://localhost:3000/update/${game.id}/${localPlayer.id}`,
+        {
+          signal: abortController.signal,
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // TODO: show error to user
+        }
+      ).catch((err) => console.error(err));
+
+      // handle response
+      try {
+        if (response) {
+          const data = await response.json();
+          console.log(data);
+          if (response.status === 200) {
+            const gameState = data.gameState;
+            if (!gameState) {
+              throw new Error('gameState not found');
+            }
+
+            if (gameState == GameState.waiting) {
+              // TODO: show error to user and navigate back to home
+              console.log('game not yet started inside game.jsx');
+            } else if (gameState == GameState.active) {
+              // update player net worths on the right
+              setPlayers((oldPlayers) => {
+                return data.players.map((player) => {
+                  return {
+                    ...player,
+                    previousNetWorth: oldPlayers.find(
+                      (oldPlayer) => oldPlayer.id === player.id
+                    ).netWorth,
+                  };
+                });
+              });
+
+              // update local player
+              setLocalPlayer(data.player);
+
+              // update stock data
+              setStockData(data.stockData);
+            } else if (gameState == GameState.finished) {
+              // route to scoreboard
+              const url = new URL(window.location);
+              url.searchParams.delete('code');
+              window.history.replaceState({}, '', url);
+              navigate('/scoreboard', {
+                state: {
+                  gameState: data.gameState,
+                  winner: data.winner,
+                  loser: data.loser,
+                },
+              });
+            }
+          } else {
+            console.log('error:', response.status, data);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        // TODO: show error to user
+      }
+    }, game.settings.roundDurationSeconds * 1000);
+
+    return () => {
+      clearInterval(updateIntervalId);
+      abortController?.abort();
+    };
+  }, []);
+
+  // ! temp
+  useEffect(() => {
+    console.log('timeRemainingForDay:', timeRemainingForDay);
+  }, [timeRemainingForDay]);
 
   return (
     <div className="game-grid">
