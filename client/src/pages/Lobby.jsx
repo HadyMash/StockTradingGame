@@ -185,9 +185,11 @@ function Lobby() {
     >
       <div className="lobby">
         <div>
-          {/* // TODO: add game code copy */}
           <div className='lobby-name-container'>
-            <h1>Lobby</h1>
+            <div className='lobby-name-header'>
+              <h1>Lobby</h1>
+              <h2 className='lobby-players-no'>[{players.length} / {game.settings?.maxPlayers ?? '~'}]</h2>
+            </div>
             <div className='game-code-container'>
               <h2 style={{ marginRight: '10px' }}
               >#{game.id.toUpperCase()}</h2>
