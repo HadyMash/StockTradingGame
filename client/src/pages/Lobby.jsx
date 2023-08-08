@@ -98,7 +98,6 @@ function Lobby() {
   }
 
   async function kick(id) {
-    // TODO: kick api call
     const response = await fetch('http://localhost:3000/remove-player', {
       method: 'POST',
       headers: {
@@ -176,8 +175,7 @@ function Lobby() {
       if (response) {
         if (response.status === 204 || response.status === 200) {
           routeToHomePage();
-        }
-        else {
+        } else {
           const data = await response.json();
           console.log(data);
           console.log('error:', response.status, data);
@@ -270,8 +268,8 @@ function Lobby() {
           style={
             game.hostId !== localPlayer.id
               ? {
-                paddingBottom: '40px',
-              }
+                  paddingBottom: '40px',
+                }
               : {}
           }
         >
@@ -340,8 +338,8 @@ function Player({ name, handleKick, showKick = true }) {
             showKick
               ? null
               : {
-                marginRight: '0',
-              }
+                  marginRight: '0',
+                }
           }
         >
           {name}
@@ -363,9 +361,9 @@ function Player({ name, handleKick, showKick = true }) {
 }
 
 // TODO: implement
-function handleStart() { }
+function handleStart() {}
 
 // TODO: implement
-function handleCopy() { }
+function handleCopy() {}
 
 export default Lobby;
