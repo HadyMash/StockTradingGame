@@ -186,7 +186,17 @@ function Lobby() {
       <div className="lobby">
         <div>
           {/* // TODO: add game code copy */}
-          <h1>Lobby - {game.id.toUpperCase()}</h1>
+          <div className='lobby-name-container'>
+            <h1>Lobby</h1>
+            <div className='game-code-container'>
+              <h2 style={{ marginRight: '10px' }}
+              >#{game.id.toUpperCase()}</h2>
+
+              <div onClick={() => navigator.clipboard.writeText(game.id)} style={{ cursor: 'pointer' }} title='Click to copy code' >
+                <svg className='copy-icon' xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 467 512.22" width="15px"><path fill-rule="nonzero" d="M131.07 372.11c.37 1 .57 2.08.57 3.2 0 1.13-.2 2.21-.57 3.21v75.91c0 10.74 4.41 20.53 11.5 27.62s16.87 11.49 27.62 11.49h239.02c10.75 0 20.53-4.4 27.62-11.49s11.49-16.88 11.49-27.62V152.42c0-10.55-4.21-20.15-11.02-27.18l-.47-.43c-7.09-7.09-16.87-11.5-27.62-11.5H170.19c-10.75 0-20.53 4.41-27.62 11.5s-11.5 16.87-11.5 27.61v219.69zm-18.67 12.54H57.23c-15.82 0-30.1-6.58-40.45-17.11C6.41 356.97 0 342.4 0 326.52V57.79c0-15.86 6.5-30.3 16.97-40.78l.04-.04C27.51 6.49 41.94 0 57.79 0h243.63c15.87 0 30.3 6.51 40.77 16.98l.03.03c10.48 10.48 16.99 24.93 16.99 40.78v36.85h50c15.9 0 30.36 6.5 40.82 16.96l.54.58c10.15 10.44 16.43 24.66 16.43 40.24v302.01c0 15.9-6.5 30.36-16.96 40.82-10.47 10.47-24.93 16.97-40.83 16.97H170.19c-15.9 0-30.35-6.5-40.82-16.97-10.47-10.46-16.97-24.92-16.97-40.82v-69.78zM340.54 94.64V57.79c0-10.74-4.41-20.53-11.5-27.63-7.09-7.08-16.86-11.48-27.62-11.48H57.79c-10.78 0-20.56 4.38-27.62 11.45l-.04.04c-7.06 7.06-11.45 16.84-11.45 27.62v268.73c0 10.86 4.34 20.79 11.38 27.97 6.95 7.07 16.54 11.49 27.17 11.49h55.17V152.42c0-15.9 6.5-30.35 16.97-40.82 10.47-10.47 24.92-16.96 40.82-16.96h170.35z" /></svg>
+              </div>
+            </div>
+          </div>
         </div>
         {/* // TODO: add end fade here too */}
         <div
@@ -228,20 +238,22 @@ function Lobby() {
         Leave
       </button>
       {kickPlayer && <div className="popup-fade" />}
-      {kickPlayer && (
-        <div className="popup center-absolute">
-          <h2>Kick {kickPlayer.name}?</h2>
-          <div className="popup-buttons">
-            <button onClick={() => setKickPlayer(null)}>Cancel</button>
-            <button onClick={() => kick(kickPlayer.id)}>Kick</button>
+      {
+        kickPlayer && (
+          <div className="popup center-absolute">
+            <h2>Kick {kickPlayer.name}?</h2>
+            <div className="popup-buttons">
+              <button onClick={() => setKickPlayer(null)}>Cancel</button>
+              <button onClick={() => kick(kickPlayer.id)}>Kick</button>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
 
-function Player({ name, handleKick, isHost = true, showKick = true}) {
+function Player({ name, handleKick, isHost = true, showKick = true }) {
   Player.propTypes = {
     name: PropTypes.string.isRequired,
     handleKick: PropTypes.func.isRequired,
@@ -262,7 +274,7 @@ function Player({ name, handleKick, isHost = true, showKick = true}) {
         }}
       >
         {isHost &&
-          <svg xmlns="http://www.w3.org/2000/svg" xmlns: xlink="http://www.w3.org/1999/xlink" fill="#ffcc00" height="20px" width="20px" version="1.1" id="Capa_1" viewBox="0 0 220 220" xml: space="preserve" style={{ 'marginRight': '5px' }}>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="#ffcc00" height="20px" width="20px" version="1.1" id="Capa_1" viewBox="0 0 220 220" space="preserve" style={{ 'marginRight': '5px' }}>
             <path d="M220,98.865c0-12.728-10.355-23.083-23.083-23.083s-23.083,10.355-23.083,23.083c0,5.79,2.148,11.084,5.681,15.14  l-23.862,21.89L125.22,73.002l17.787-20.892l-32.882-38.623L77.244,52.111l16.995,19.962l-30.216,63.464l-23.527-21.544  c3.528-4.055,5.671-9.344,5.671-15.128c0-12.728-10.355-23.083-23.083-23.083C10.355,75.782,0,86.137,0,98.865  c0,11.794,8.895,21.545,20.328,22.913l7.073,84.735H192.6l7.073-84.735C211.105,120.41,220,110.659,220,98.865z" />
           </svg>
         }
