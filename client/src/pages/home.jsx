@@ -321,7 +321,16 @@ function GameSettingSlider({ title, min, max, value, setValue, step }) {
         min={min}
         max={max}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          let value = Number(e.target.value);
+          if (value > max) {
+            value = max;
+          }
+          if (value < min) {
+            value = min;
+          }
+          setValue(value);
+        }}
       ></input>
     </div>
   );
