@@ -40,16 +40,16 @@ function Lobby() {
             if (!gameState) {
               throw new Error('gameState not found');
             }
-            if (gameState == GameState.waiting) {
-              // lobby
-              setPlayers(data.players);
-              setGame((previousGame) => {
-                return {
-                  ...previousGame,
-                  hostId: data.hostId,
-                };
-              });
-            } else if (gameState == GameState.inProgress) {
+            console.log('updating players and game');
+            setPlayers(data.players);
+            setGame((previousGame) => {
+              return {
+                ...previousGame,
+                hostId: data.hostId,
+              };
+            });
+
+            if (gameState == GameState.inProgress) {
               // TODO: route to game
             } else {
               // TODO: route to scoreboard
@@ -70,12 +70,69 @@ function Lobby() {
     };
   }, []);
 
+  useEffect(() => {
+    console.log(!players.find((player) => player.id === localPlayer.id));
+    if (!players.find((player) => player.id === localPlayer.id)) {
+      // player has been kicked
+      console.log('kicked');
+      const url = new URL(window.location);
+      url.searchParams.delete('code');
+      window.history.replaceState({}, '', url);
+      navigate('/home');
+    }
+  }, [players]);
+
   function handleKick(player) {
     setKickPlayer(player);
   }
 
-  function kick(id) {
+  async function kick(id) {
     // TODO: kick api call
+    const response = await fetch('http://localhost:3000/remove-player', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        gameId: game.id,
+        requestId: localPlayer.id,
+        playerId: id,
+      }),
+      // TODO: show error to user
+    }).catch((err) => console.error(err));
+
+    try {
+      if (!response) {
+        throw new Error('no response');
+      }
+      const data = await response.json();
+      console.log(data);
+
+      if (response.status === 200) {
+        const gameState = data.gameState;
+        if (!gameState) {
+          throw new Error('gameState not found');
+        }
+        setPlayers(data.players);
+        setGame((previousGame) => {
+          return {
+            ...previousGame,
+            hostId: data.hostId,
+          };
+        });
+        if (gameState == GameState.inProgress) {
+          // TODO: route to game
+        } else {
+          // TODO: route to scoreboard
+        }
+      } else {
+        console.log('error:', response.status, data);
+      }
+    } catch (error) {
+      console.error(error);
+      // TODO: show error to user
+    }
+
     setKickPlayer(null);
   }
 
