@@ -188,7 +188,7 @@ function Lobby() {
           <div className='lobby-name-container'>
             <div className='lobby-name-header'>
               <h1>Lobby</h1>
-              <h2 className='lobby-players-no'>[{players.length} / {game.settings?.maxPlayers ?? '~'}]</h2>
+              <h2>[{players.length} / {game.settings?.maxPlayers ?? '~'}]</h2>
             </div>
             <div className='game-code-container'>
               <h2 style={{ marginRight: '10px' }}

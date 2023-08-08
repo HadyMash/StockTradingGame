@@ -832,9 +832,6 @@ button.lobby-leave {
   transform: scale(1.1);
   transition: ease 0.05s;
 }
-.lobby-players-no {
-  color: #727272;
-}
 
 .lobby-name-header {
   display: flex;
