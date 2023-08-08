@@ -157,8 +157,43 @@ function Lobby() {
     setKickPlayer(null);
   }
 
-  function handleLeave() {
-    // TODO: leave api call
+  async function handleLeave() {
+    const response = await fetch('http://localhost:3000/remove-player', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        playerId: localPlayer.id,
+        requestId: localPlayer.id,
+        gameId: game.id,
+      }),
+      // TODO: show error to user
+    }).catch((err) => console.error(err));
+
+    // handle response
+    try {
+      if (response) {
+        if (response.status === 204 || response.status === 200) {
+          routeToHomePage();
+        }
+        else {
+          const data = await response.json();
+          console.log(data);
+          console.log('error:', response.status, data);
+          // TODO: show error to user
+        }
+      }
+    } catch (err) {
+      console.log('error:', err);
+    }
+  }
+
+  function routeToHomePage() {
+    const url = new URL(window.location);
+    url.searchParams.delete('code');
+    window.history.replaceState({}, '', url);
+    navigate(`/home`);
   }
 
   async function handleStartGame() {
@@ -235,8 +270,8 @@ function Lobby() {
           style={
             game.hostId !== localPlayer.id
               ? {
-                  paddingBottom: '40px',
-                }
+                paddingBottom: '40px',
+              }
               : {}
           }
         >
@@ -305,8 +340,8 @@ function Player({ name, handleKick, showKick = true }) {
             showKick
               ? null
               : {
-                  marginRight: '0',
-                }
+                marginRight: '0',
+              }
           }
         >
           {name}
@@ -328,9 +363,9 @@ function Player({ name, handleKick, showKick = true }) {
 }
 
 // TODO: implement
-function handleStart() {}
+function handleStart() { }
 
 // TODO: implement
-function handleCopy() {}
+function handleCopy() { }
 
 export default Lobby;
