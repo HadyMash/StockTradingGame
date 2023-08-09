@@ -828,6 +828,10 @@ button.lobby-leave {
   justify-content: center;
   align-items: center;
   color: #727272;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  padding: 5px 5px;
 }
 .copy-icon:hover {
   transform: scale(1.1);
