@@ -97,7 +97,7 @@ function Game() {
               state: {
                 gameState: data.gameState,
                 winner: data.winner,
-                loser: data.loser,
+                losers: data.losers,
               },
             });
           }
@@ -154,7 +154,7 @@ function Game() {
               state: {
                 gameState: data.gameState,
                 winner: data.winner,
-                loser: data.loser,
+                losers: data.losers,
               },
             });
           }
@@ -228,7 +228,7 @@ function Game() {
                 state: {
                   gameState: data.gameState,
                   winner: data.winner,
-                  loser: data.loser,
+                  losers: data.losers,
                 },
               });
             }

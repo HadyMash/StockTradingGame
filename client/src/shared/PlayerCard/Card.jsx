@@ -2,6 +2,10 @@
 import RowStock from './RowStock';
 
 function Card({ player }) {
+    console.log("card hereeeee");
+    console.log("player,,,,", player)
+    console.log("player stocks,,,,", player.stocks)
+    const stocks = Object.keys(player.stocks);
     return (
         <div className='card-cont'>
             <div className="card">
@@ -10,8 +14,8 @@ function Card({ player }) {
                     <div className='player-name-scoreboard'>{player.name}</div>
                 </div>
                 <hr style={{ "width": '90%' }} />
-                {player.stocks.map((stock, index) => {
-                    return <RowStock stockName={stock.stockName} stockPrice={stock.stockPrice} key={index} />
+                {stocks.map((stock, index) => {
+                    return <RowStock stockName={stock} stockPrice={player.stocks[stock]} key={index} />
                 })}
 
             </div>

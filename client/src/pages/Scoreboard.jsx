@@ -1,6 +1,16 @@
 import Card from '../shared/PlayerCard/Card';
+import { useLocation } from 'react-router-dom';
+
 
 function Scoreboard() {
+  const location = useLocation();
+  const winner1 = location.state.winner;
+  const losers1 = location.state.losers;
+  console.log("winner hereeeee, ", winner1);
+  console.log("losers hereeeee, ", losers1);
+  console.log("stocks hereee hereeeee, ", winner1.stocks);
+
+
   const winner = {
     name: 'Emad',
     stocks: [
@@ -41,13 +51,13 @@ function Scoreboard() {
       <div className="winner">
         <h2>Winner</h2>
         <div className="winner-cont">
-          <Card player={winner}> </Card>
+          <Card player={winner1}> </Card>
         </div>
       </div>
       <div className="losers">
         <h4>Losers</h4>
         <div className="losers-cont">
-          {losers.map((loser, index) => {
+          {losers1.map((loser, index) => {
             return <Card player={loser} key={index} />;
           })}
         </div>

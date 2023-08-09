@@ -84,7 +84,7 @@ function Lobby() {
                 state: {
                   gameState: data.gameState,
                   winner: data.winner,
-                  loser: data.loser,
+                  losers: data.losers,
                 },
               });
             }
@@ -172,7 +172,7 @@ function Lobby() {
             state: {
               gameState: data.gameState,
               winner: data.winner,
-              loser: data.loser,
+              losers: data.losers,
             },
           });
         }
@@ -281,7 +281,7 @@ function Lobby() {
             state: {
               gameState: data.gameState,
               winner: data.winner,
-              loser: data.loser,
+              losers: data.losers,
             },
           });
         }
