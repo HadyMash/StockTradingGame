@@ -732,7 +732,7 @@ function Players({ localPlayer, players }) {
       >
         <Player
           key={players[localPlayerIndex].id}
-          playerName={players[localPlayerIndex].name}
+          playerName={'You'}
           playerMoney={players[localPlayerIndex].netWorth}
           prevPlayerMoney={players[localPlayerIndex].previousNetWorth}
         />
