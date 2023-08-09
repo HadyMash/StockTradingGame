@@ -830,7 +830,7 @@ button.lobby-leave {
   color: #727272;
   position: absolute;
   top: 5px;
-  left: 5px;
+  left: 20px;
   padding: 5px 5px;
 }
 .copy-icon:hover {
