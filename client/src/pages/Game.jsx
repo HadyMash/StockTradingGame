@@ -274,6 +274,7 @@ function Game() {
           selectedSymbol={selectedSymbol}
           setSymbol={setSelectedSymbol}
           latestStockData={stockData[stockData.length - 1]}
+          previousStockDayData={stockData[stockData.length - 2]}
           handleBuy={handleBuy}
           handleSell={handleSell}
         />
@@ -426,6 +427,7 @@ function Account({
   selectedSymbol,
   setSymbol,
   latestStockData,
+  previousStockDayData,
   handleBuy,
   handleSell,
 }) {
@@ -435,6 +437,7 @@ function Account({
     selectedSymbol: PropTypes.string.isRequired,
     setSymbol: PropTypes.func.isRequired,
     latestStockData: PropTypes.object.isRequired,
+    previousStockDayData: PropTypes.object.isRequired,
     handleBuy: PropTypes.func.isRequired,
     handleSell: PropTypes.func.isRequired,
   };
@@ -449,6 +452,7 @@ function Account({
         holdings={holdings}
         setSymbol={setSymbol}
         latestStockData={latestStockData}
+        previousStockDayData={previousStockDayData}
       />
       <Trade
         symbol={selectedSymbol}
@@ -462,11 +466,17 @@ function Account({
   );
 }
 
-function Holdings({ holdings, setSymbol, latestStockData }) {
+function Holdings({
+  holdings,
+  setSymbol,
+  latestStockData,
+  previousStockDayData,
+}) {
   Holdings.propTypes = {
     holdings: PropTypes.object.isRequired,
     setSymbol: PropTypes.func.isRequired,
     latestStockData: PropTypes.object.isRequired,
+    previousStockDayData: PropTypes.object.isRequired,
   };
 
   return (
@@ -481,6 +491,9 @@ function Holdings({ holdings, setSymbol, latestStockData }) {
             symbol={symbol}
             quantity={holdings[symbol]}
             value={holdings[symbol] * latestStockData[symbol].price}
+            previousValue={
+              holdings[symbol] * previousStockDayData[symbol].price
+            }
             setSymbol={setSymbol}
           />
         ))}
@@ -490,15 +503,31 @@ function Holdings({ holdings, setSymbol, latestStockData }) {
   );
 }
 
-function Asset({ symbol, quantity, value, setSymbol }) {
+function Asset({ symbol, quantity, value, previousValue, setSymbol }) {
   Asset.propTypes = {
     symbol: PropTypes.string.isRequired,
     quantity: PropTypes.number.isRequired,
     value: PropTypes.number.isRequired,
+    previousValue: PropTypes.number.isRequired,
     setSymbol: PropTypes.func.isRequired,
   };
 
-  // TODO: make symbol clickable
+  const [color, setColor] = useState();
+
+  useEffect(() => {
+    if (value > previousValue) {
+      setColor('green');
+    } else if (value < previousValue) {
+      setColor('red');
+    } else {
+      setColor('grey');
+    }
+
+    setTimeout(() => {
+      setColor(null);
+    }, 1000);
+  }, [value]);
+
   // TODO: add commas to value
   return (
     <React.Fragment>
@@ -506,7 +535,14 @@ function Asset({ symbol, quantity, value, setSymbol }) {
         {symbol}
       </p>
       <p className="quantity">{quantity.toFixed(2)}</p>
-      <p className="value">${value.toFixed(2)}</p>
+      <p
+        className="value"
+        style={{
+          color: color,
+        }}
+      >
+        ${value.toFixed(2)}
+      </p>
     </React.Fragment>
   );
 }
@@ -736,11 +772,31 @@ function Player({ playerName, playerMoney, prevPlayerMoney }) {
     prevPlayerMoney: PropTypes.number.isRequired,
   };
 
+  const [color, setColor] = useState(null);
+
+  useEffect(() => {
+    if (playerMoney > prevPlayerMoney) {
+      setColor('green');
+    } else if (playerMoney < prevPlayerMoney) {
+      setColor('red');
+    } else if (playerMoney == prevPlayerMoney) {
+      setColor('grey');
+    }
+    setTimeout(() => {
+      setColor(null);
+    }, 1000);
+  }, [playerMoney]);
+
   return (
     <div className="player">
       <PlayerAvatar playerName={playerName} />
       <span className="player-name">{playerName}</span>
-      <span className="player-money">
+      <span
+        className="player-money"
+        style={{
+          color: color,
+        }}
+      >
         {playerMoney > prevPlayerMoney ? (
           <ArrowUpLine color="green" style={{ fontSize: '22px' }} />
         ) : playerMoney == prevPlayerMoney ? (
