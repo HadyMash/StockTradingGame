@@ -426,10 +426,4 @@ function Player({ name, handleKick, isHost = true, showKick = true }) {
   );
 }
 
-// TODO: implement
-function handleStart() {}
-
-// TODO: implement
-function handleCopy() {}
-
 export default Lobby;

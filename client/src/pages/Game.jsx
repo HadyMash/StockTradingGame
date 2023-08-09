@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { Dropdown, Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import {
@@ -9,6 +10,7 @@ import {
   VictoryLine,
   VictoryZoomContainer,
 } from 'victory';
+import ToastContainer from 'react-toastify';
 import TextInput from '../shared/TextInput';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import { Minus, ArrowDownLine, ArrowUpLine } from '@rsuite/icons';
@@ -26,15 +28,7 @@ function Game() {
       };
     })
   );
-  const [localPlayer, _setLocalPlayer] = useState(location.state.localPlayer);
-  function setLocalPlayer(newLocalPlayer) {
-    console.log('setLocalPlayer', newLocalPlayer);
-    setPreviousLocalPlayer(localPlayer);
-    _setLocalPlayer(newLocalPlayer);
-  }
-  const [previousLocalPlayer, setPreviousLocalPlayer] = useState(
-    location.state.localPlayer
-  );
+  const [localPlayer, setLocalPlayer] = useState(location.state.localPlayer);
   const [stockData, setStockData] = useState(location.state.stockData);
   const symbols = Object.keys(location.state.stockData[0]);
   const [selectedSymbol, setSelectedSymbol] = useState(symbols[0]);
@@ -42,6 +36,19 @@ function Game() {
     game.settings.roundDurationSeconds -
       (Date.now() - game.startTimestamp) / 1000
   );
+
+  function showErrorToast(message) {
+    toast.error(message, {
+      position: 'top-right',
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: 'light',
+    });
+  }
 
   useEffect(() => {
     console.log(location.state);
@@ -59,8 +66,10 @@ function Game() {
         symbol,
         quantity,
       }),
-      // TODO: show error to user
-    }).catch((err) => console.error(err));
+    }).catch((err) => {
+      console.error(err);
+      showErrorToast(err);
+    });
 
     try {
       if (response) {
@@ -73,8 +82,9 @@ function Game() {
           }
 
           if (gameState == GameState.waiting) {
-            // TODO: show error to user and navigate back to home
             console.log('game not yet started inside game.jsx');
+            showErrorToast("game hasn't started yet");
+            navigate('/');
           } else if (gameState == GameState.active) {
             // update localPlayer
             setLocalPlayer(data.player);
@@ -97,7 +107,7 @@ function Game() {
       }
     } catch (error) {
       console.error(error);
-      // TODO: show error to user
+      showErrorToast(error);
     }
   }
 
@@ -113,8 +123,10 @@ function Game() {
         symbol,
         quantity,
       }),
-      // TODO: show error to user
-    }).catch((err) => console.error(err));
+    }).catch((err) => {
+      console.error(err);
+      showErrorToast(err);
+    });
 
     try {
       if (response) {
@@ -127,8 +139,9 @@ function Game() {
           }
 
           if (gameState == GameState.waiting) {
-            // TODO: show error to user and navigate back to home
             console.log('game not yet started inside game.jsx');
+            showErrorToast("game hasn't started yet");
+            navigate('/');
           } else if (gameState == GameState.active) {
             // update localPlayer
             setLocalPlayer(data.player);
@@ -151,7 +164,7 @@ function Game() {
       }
     } catch (error) {
       console.error(error);
-      // TODO: show error to user
+      showErrorToast(error);
     }
   }
 
@@ -167,9 +180,11 @@ function Game() {
           headers: {
             'Content-Type': 'application/json',
           },
-          // TODO: show error to user
         }
-      ).catch((err) => console.error(err));
+      ).catch((err) => {
+        console.error(err);
+        showErrorToast(err);
+      });
 
       // handle response
       try {
@@ -183,8 +198,9 @@ function Game() {
             }
 
             if (gameState == GameState.waiting) {
-              // TODO: show error to user and navigate back to home
               console.log('game not yet started inside game.jsx');
+              showErrorToast("game hasn't started yet");
+              navigate('/');
             } else if (gameState == GameState.active) {
               // update player net worths on the right
               setPlayers((oldPlayers) => {
@@ -225,7 +241,7 @@ function Game() {
         }
       } catch (err) {
         console.error(err);
-        // TODO: show error to user
+        showErrorToast(err);
       }
     }
     const updateIntervalId = setInterval(async () => {
@@ -235,7 +251,7 @@ function Game() {
         update(abortController);
       } catch (error) {
         console.error(error);
-        // TODO: show error to user
+        showErrorToast(error);
       }
     }, game.settings.roundDurationSeconds * 1000);
 
@@ -258,37 +274,40 @@ function Game() {
   }, [timeRemainingForDay]);
 
   return (
-    <div className="game-grid">
-      <div className="panel chart">
-        <Chart
-          selectedSymbol={selectedSymbol}
-          symbols={symbols}
-          setSymbol={setSelectedSymbol}
-          data={stockData.map((obj) => {
-            return {
-              id: obj[selectedSymbol].id,
-              price: obj[selectedSymbol].price,
-              volume: obj[selectedSymbol].volume,
-            };
-          })}
-        />
+    <React.Fragment>
+      <div className="game-grid">
+        <div className="panel chart">
+          <Chart
+            selectedSymbol={selectedSymbol}
+            symbols={symbols}
+            setSymbol={setSelectedSymbol}
+            data={stockData.map((obj) => {
+              return {
+                id: obj[selectedSymbol].id,
+                price: obj[selectedSymbol].price,
+                volume: obj[selectedSymbol].volume,
+              };
+            })}
+          />
+        </div>
+        <div className="panel account">
+          <Account
+            money={localPlayer.money}
+            holdings={localPlayer.stocks}
+            selectedSymbol={selectedSymbol}
+            setSymbol={setSelectedSymbol}
+            latestStockData={stockData[stockData.length - 1]}
+            previousStockDayData={stockData[stockData.length - 2]}
+            handleBuy={handleBuy}
+            handleSell={handleSell}
+          />
+        </div>
+        <div className="panel">
+          <Players localPlayer={localPlayer} players={players} />
+        </div>
       </div>
-      <div className="panel account">
-        <Account
-          money={localPlayer.money}
-          holdings={localPlayer.stocks}
-          selectedSymbol={selectedSymbol}
-          setSymbol={setSelectedSymbol}
-          latestStockData={stockData[stockData.length - 1]}
-          previousStockDayData={stockData[stockData.length - 2]}
-          handleBuy={handleBuy}
-          handleSell={handleSell}
-        />
-      </div>
-      <div className="panel">
-        <Players localPlayer={localPlayer} players={players} />
-      </div>
-    </div>
+      <ToastContainer />
+    </React.Fragment>
   );
 }
 
