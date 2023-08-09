@@ -722,48 +722,112 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
         }
       }
 
-      // TODO: check for end conditions
+      // check for end conditions
+      let endGame = false;
+      const playersArray = [];
+      console.log('day number', dayNumber);
+      console.log('max game turns', game.settings.maxGameTurns);
+      console.log(
+        'dayNumber >= game.settings.maxGameTurns',
+        dayNumber >= game.settings.maxGameTurns
+      );
+      if (dayNumber >= game.settings.maxGameTurns) {
+        endGame = true;
+      } else {
+        for (let i = 0; i < Object.keys(game.players).length; i++) {
+          const player = game.players[Object.keys(game.players)[i]];
+          // calculate player's net worth
+          let netWorth = game.players[playerId].money;
+          for (
+            let i = 0;
+            i < Object.keys(game.players[playerId].stocks).length;
+            i++
+          ) {
+            const symbol = Object.keys(game.players[playerId].stocks)[i];
+            const quantity = game.players[playerId].stocks[symbol];
+            const price = stockData[20 + dayNumber - 1][symbol].price;
 
+            netWorth += quantity * price;
+          }
+
+          if (netWorth >= game.settings.targetMoney) {
+            endGame = true;
+            break;
+          }
+          playersArray.push({
+            id: playerId,
+            name: game.players[playerId].name,
+            netWorth: netWorth,
+          });
+        }
+      }
       // console.log('stock data', stockData);
 
-      response = {
-        gameState: game.state,
-        players: [
-          ...Object.keys(game.players).map((playerId) => {
-            // calculate player's net worth
-            let netWorth = game.players[playerId].money;
-            for (
-              let i = 0;
-              i < Object.keys(game.players[playerId].stocks).length;
-              i++
-            ) {
-              const symbol = Object.keys(game.players[playerId].stocks)[i];
-              const quantity = game.players[playerId].stocks[symbol];
-              const price = stockData[20 + dayNumber - 1][symbol].price;
+      if (endGame) {
+        // TODO: end game response
+        const response = await db.endGame(gameId);
+        if (response.statusCode !== 200) {
+          throw new Error(response.resourceBody);
+        }
+        // TODO: check if ai won
 
-              netWorth += quantity * price;
-            }
+        let winner = game.players[Object.keys(game.players)[0]];
+        for (let i = 0; i < Object.keys(game.players).length; i++) {
+          const playerId = Object.keys(game.players)[i];
+          if (game.players[playerId].money > winner.money) {
+            winner = game.players[playerId];
+          }
+        }
+        response = {
+          gameState: game.state,
+          winner: winner,
+          losers: Object.keys(game.players)
+            .filter((id) => id !== winner.id)
+            .map((playerId) => {
+              return game.players[playerId];
+            }),
+        };
+      } else {
+        response = {
+          gameState: game.state,
+          players: [
+            ...Object.keys(game.players).map((playerId) => {
+              // calculate player's net worth
+              let netWorth = game.players[playerId].money;
+              for (
+                let i = 0;
+                i < Object.keys(game.players[playerId].stocks).length;
+                i++
+              ) {
+                const symbol = Object.keys(game.players[playerId].stocks)[i];
+                const quantity = game.players[playerId].stocks[symbol];
+                const price = stockData[20 + dayNumber - 1][symbol].price;
 
-            return {
-              id: playerId,
-              name: game.players[playerId].name,
-              netWorth: netWorth,
-            };
-          }),
-          {
-            id: 'ai',
-            name: 'AI',
-            // TODO: test if day number starts at 0 or 1 (i believe it starts at 0 because of the math floor)
-            netWorth: resource.aiNetWorthOverTime[dayNumber],
-          },
-        ],
-        player: game.players[playerId],
-        hostId: game.hostId,
-        startTimestamp: game.startTimestamp,
-        stockData: stockData,
-      };
+                netWorth += quantity * price;
+              }
+
+              return {
+                id: playerId,
+                name: game.players[playerId].name,
+                netWorth: netWorth,
+              };
+            }),
+            {
+              id: 'ai',
+              name: 'AI',
+              // TODO: test if day number starts at 0 or 1 (i believe it starts at 0 because of the math floor)
+              netWorth: resource.aiNetWorthOverTime[dayNumber],
+            },
+          ],
+          player: game.players[playerId],
+          hostId: game.hostId,
+          startTimestamp: game.startTimestamp,
+          stockData: stockData,
+        };
+      }
       // console.log('response', response);
     } else if (game.state === GameState.finished) {
+      // TODO: check if ai won
       let winner = game.players[Object.keys(game.players)[0]];
       for (let i = 0; i < Object.keys(game.players).length; i++) {
         const playerId = Object.keys(game.players)[i];

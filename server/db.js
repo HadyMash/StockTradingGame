@@ -484,7 +484,10 @@ export async function buyStock(gameId, playerId, symbol, quantity) {
     operations: opp,
   } = await getTransactionInfo(gameId, playerId, symbol, quantity);
   if (playerMoney < stockPrice * quantity) {
-    throw new Error(`Player ${playerId} does not have enough money`);
+    quantity = Math.floor((100 * playerMoney) / stockPrice) / 100;
+    if (quantity === 0) {
+      throw new Error(`Player ${playerId} does not have enough money`);
+    }
   }
 
   const operations = opp;
