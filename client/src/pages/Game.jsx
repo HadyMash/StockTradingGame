@@ -377,7 +377,7 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
         ref={graphRef}
         className="graph"
         // TODO: fix issue with trackpad not working great and stuttering
-        onWheelCapture={panGraph}
+        // onWheelCapture={panGraph}
       >
         {/* // TODO: style graph */}
         <VictoryChart
@@ -395,7 +395,6 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
             data={data}
             x="id"
             y="price"
-            // TODO: fix scuffed animation
             // animate={{
             //   onEnter: {
             //     duration: 500,
@@ -429,7 +428,6 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
         </VictoryChart>
       </div>
       <div className="dropdown">
-        {/* // TODO: make caret bigger */}
         <Dropdown title={selectedSymbol} activeKey={selectedSymbol} size="lg">
           {symbols.map((symbol) => (
             <Dropdown.Item
@@ -553,7 +551,6 @@ function Asset({ symbol, quantity, value, previousValue, setSymbol }) {
     }, 1000);
   }, [value]);
 
-  // TODO: add commas to value
   return (
     <React.Fragment>
       <p className="symbol" onClick={() => setSymbol(symbol)}>
@@ -566,7 +563,7 @@ function Asset({ symbol, quantity, value, previousValue, setSymbol }) {
           color: color,
         }}
       >
-        ${value.toFixed(2)}
+        ${value.toLocaleString()}
       </p>
     </React.Fragment>
   );
@@ -589,7 +586,6 @@ function Trade({
     handleSell: PropTypes.func.isRequired,
   };
 
-  // TODO: combine quantity and total into one state
   const [quantity, setQuantity] = useState(0);
   const [estimatedTotal, setEstimatedTotal] = useState(0);
   const [showBuy, setShowBuy] = useState(true);
@@ -608,10 +604,7 @@ function Trade({
     if (estimatedTotal > maxTotal) setEstimatedTotal(maxTotal);
   }, [showBuy, maxQuantity, maxTotal, quantity, estimatedTotal]);
 
-  // TODO: clamp quantity and total when toggling between buy and sell
   const toggleShowBuy = () => setShowBuy((val) => !val);
-
-  // TODO: add suffix to quantity and total
 
   return (
     <div className="trade">
@@ -634,7 +627,6 @@ function Trade({
           </button>
         </div>
       </div>
-      {/* // TODO: style sliders to match the ones on the home page */}
       <TextInput
         type="number"
         prefix="Quantity:"
@@ -659,8 +651,7 @@ function Trade({
       />
       <TextInput
         type="number"
-        // TODO: add approximate symbol
-        prefix={`Total:${estimatedTotal > 0 ? ' $' : ''}`}
+        prefix={`Total:${estimatedTotal > 0 ? ' ≈$' : ''}`}
         min={0}
         max={maxTotal}
         value={estimatedTotal}
@@ -682,7 +673,6 @@ function Trade({
           </p>
         )}
       />
-      {/* // TODO: style slider */}
       <Slider
         progress
         value={quantity}
@@ -767,22 +757,18 @@ function Players({ localPlayer, players }) {
           playerMoney={players[aiIndex].netWorth}
           prevPlayerMoney={players[aiIndex].previousNetWorth}
         />
-        {
-          // TODO: cache to avoid redundant computation
-          // TODO: implement previous money
-          players
-            .filter(
-              (player) => player.id !== localPlayer.id && player.id !== 'ai'
-            )
-            .map((player) => (
-              <Player
-                key={player.id}
-                playerName={player.name}
-                playerMoney={player.netWorth}
-                prevPlayerMoney={player.previousNetWorth}
-              />
-            ))
-        }
+        {players
+          .filter(
+            (player) => player.id !== localPlayer.id && player.id !== 'ai'
+          )
+          .map((player) => (
+            <Player
+              key={player.id}
+              playerName={player.name}
+              playerMoney={player.netWorth}
+              prevPlayerMoney={player.previousNetWorth}
+            />
+          ))}
       </div>
       <div className={showStartFade ? 'start-fade2' : undefined}></div>
       <div className={showEndFade ? 'end-fade2' : undefined}></div>

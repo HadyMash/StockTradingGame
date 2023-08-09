@@ -679,7 +679,6 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
         hostId: game.hostId,
       };
     } else if (game.state === GameState.active) {
-      // TODO: check for end conditions
       const dayNumber = Math.floor(
         (Date.now() - game.startTimestamp) /
           1000 /
@@ -697,7 +696,6 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
         const rawEntries = await db.getMarketDataEntries(
           symbol,
           game.stockStartIds[symbol],
-          // TODO: replace all + 20 with a constant
           dayNumber + 20
         );
         // console.log('raw entries', rawEntries);
@@ -764,12 +762,10 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
       // console.log('stock data', stockData);
 
       if (endGame) {
-        // TODO: end game response
         const endGameResponse = await db.endGame(gameId);
         if (endGameResponse.statusCode !== 200) {
           throw new Error(endGameResponse.resourceBody);
         }
-        // TODO: check if ai won
 
         let winner = game.players[Object.keys(game.players)[0]];
         for (let i = 0; i < Object.keys(game.players).length; i++) {
@@ -778,6 +774,17 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
             winner = game.players[playerId];
           }
         }
+
+        if (
+          winner.money < resource.aiNetWorthOverTime[game.settings.maxGameTurns]
+        ) {
+          winner = {
+            id: 'ai',
+            name: 'AI',
+            netWorth: resource.aiNetWorthOverTime[game.settings.maxGameTurns],
+          };
+        }
+
         response = {
           gameState: game.state,
           winner: winner,
@@ -815,7 +822,6 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
             {
               id: 'ai',
               name: 'AI',
-              // TODO: test if day number starts at 0 or 1 (i believe it starts at 0 because of the math floor)
               netWorth: resource.aiNetWorthOverTime[dayNumber],
             },
           ],
@@ -827,7 +833,6 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
       }
       // console.log('response', response);
     } else if (game.state === GameState.finished) {
-      // TODO: check if ai won
       let winner = game.players[Object.keys(game.players)[0]];
       for (let i = 0; i < Object.keys(game.players).length; i++) {
         const playerId = Object.keys(game.players)[i];
@@ -835,6 +840,16 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
           winner = game.players[playerId];
         }
       }
+      if (
+        winner.money < resource.aiNetWorthOverTime[game.settings.maxGameTurns]
+      ) {
+        winner = {
+          id: 'ai',
+          name: 'AI',
+          netWorth: resource.aiNetWorthOverTime[game.settings.maxGameTurns],
+        };
+      }
+
       response = {
         gameState: game.state,
         winner: winner,

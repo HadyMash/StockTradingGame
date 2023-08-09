@@ -8,14 +8,12 @@ function Loading() {
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get('code');
     if (code) {
-      // TODO: check if a game with this code exists and route to home / lobby/game accordingly
       navigate(`/home/${code}`);
       return;
     }
     navigate('/home');
   }, []);
 
-  // TODO: change spinner color
   return <Loader size="lg" content="Loading..." vertical center />;
 }
 

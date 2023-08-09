@@ -80,7 +80,13 @@ function Lobby() {
                 },
               });
             } else {
-              // TODO: route to scoreboard
+              navigate('/scoreboard', {
+                state: {
+                  gameState: data.gameState,
+                  winner: data.winner,
+                  loser: data.loser,
+                },
+              });
             }
           } else {
             console.log('error:', response.status, data);
@@ -162,7 +168,13 @@ function Lobby() {
             },
           });
         } else {
-          // TODO: route to scoreboard
+          navigate('/scoreboard', {
+            state: {
+              gameState: data.gameState,
+              winner: data.winner,
+              loser: data.loser,
+            },
+          });
         }
       } else {
         console.log('error:', response.status, data);
@@ -265,7 +277,13 @@ function Lobby() {
             },
           });
         } else {
-          // TODO: route to scoreboard
+          navigate('/scoreboard', {
+            state: {
+              gameState: data.gameState,
+              winner: data.winner,
+              loser: data.loser,
+            },
+          });
         }
       } else {
         console.log('error:', response.status, data);
@@ -311,7 +329,6 @@ function Lobby() {
             </div>
           </div>
         </div>
-        {/* // TODO: add end fade here too */}
         <div
           className="player-grid"
           style={
@@ -341,7 +358,6 @@ function Lobby() {
             onClick={handleStartGame}
             disabled={players.length < 2 || loadingStartGame}
           >
-            {/* // TODO: consider replacing loading text with rsuite spinner */}
             {loadingStartGame ? 'Loading...' : 'Start Game'}
           </button>
         )}

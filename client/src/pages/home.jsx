@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Slider } from 'rsuite';
@@ -8,11 +8,9 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import DividerWithText from '../shared/DividerWithText';
 
-// TODO: store user id in local storage or session storage or cookie
 function Home() {
   const params = useParams();
   const [showCreateGame, setShowCreateGame] = useState(false);
-  // TODO: replace name state with a ref
   const [name, setName] = useState('');
   const [gameId, setGameId] = useState(
     params.code?.toUpperCase() ??
@@ -49,7 +47,6 @@ function Home() {
 
   async function handleJoinGame() {
     setLoadingJoinGame(true);
-    // TODO: validate
     let valid = true;
     // check name
     if (!name) {
@@ -106,7 +103,6 @@ function Home() {
   async function handleCreateGame() {
     if (showCreateGame) {
       setLoadingCreateGame(true);
-      // TODO: validate and show errors
       let valid = true;
       if (!name) {
         valid = false;
@@ -215,7 +211,6 @@ function Home() {
             onClick={handleCreateGame}
             disabled={(showCreateGame && !name) || loadingCreateGame}
           >
-            {/* // TODO: consider replacing loading text with rsuite loading spinner */}
             {loadingCreateGame ? 'Loading...' : 'Create Game'}
           </button>
         </div>
@@ -242,7 +237,6 @@ function JoinGame({
 
   return (
     <React.Fragment>
-      {/* // TODO: allow only characters (no spaces and numbers) */}
       <input
         type="text"
         placeholder="Game ID"
@@ -253,7 +247,6 @@ function JoinGame({
         onClick={handleJoinGame}
         disabled={!name || !gameId || loadingJoinGame}
       >
-        {/* // TODO: consider replacing loading text with rsuite spinner */}
         {loadingJoinGame ? 'Loading...' : 'Join Game'}
       </button>
       <DividerWithText>or</DividerWithText>
@@ -377,7 +370,6 @@ function GoBack({ setShowCreateGame }) {
   };
 
   return (
-    // TODO: format button properly
     <button className="go-back" onClick={() => setShowCreateGame(false)}>
       <ArrowLeftLine style={{ fontSize: '22px' }} />
       <p style={{ fontSize: '16px' }}>Go Back</p>
