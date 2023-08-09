@@ -4,11 +4,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import { ArrowLeftLine } from '@rsuite/icons';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { setSocketQuery, socket } from '../socket';
 import DividerWithText from '../shared/DividerWithText';
-import { Game as GameObject, GameState } from '../../../game.mjs';
+import { GameState } from '../../../game.mjs';
 import { socketQueryType } from '../../../socketQueryType.mjs';
 
 function Home() {
@@ -49,26 +49,16 @@ function Home() {
   }
 
   useEffect(() => {
-    socket.on('join-game', socketOnJoinGame);
-    socket.on('connect_error', () => {
-      showErrorToast('Could not connect to game');
-      setLoadingJoinGame(false);
-    });
-    socket.on('disconnect', () => {
-      showErrorToast('Could not connect to game');
-      setLoadingJoinGame(false);
-    });
     return () => {
-      socket.off('join-game');
-      socket.off('connect_error');
-      socket.off('disconnect');
+      console.log('socket cleanup function unsubscribing from all events');
+      socket?.off();
     };
-  });
+  }, []);
 
   function socketOnJoinGame(res) {
     const game = res.game;
-    const localPlayer = res.localPlayer;
-    const players = res.players;
+    const localPlayer = res.player;
+    const players = res.game.players;
 
     console.log('gameJoined', game, localPlayer, players);
     const url = new URL(window.location);
@@ -103,77 +93,113 @@ function Home() {
 
   async function handleJoinGame() {
     setLoadingJoinGame(true);
-    let valid = true;
-    // check name
-    if (!name) {
-      valid = false;
-      showErrorToast('Please enter a name');
-    }
+    try {
+      let valid = true;
+      // check name
+      if (!name) {
+        valid = false;
+        showErrorToast('Please enter a name');
+      }
 
-    if (!gameId) {
-      valid = false;
-      showErrorToast('Please enter a game code');
-    }
+      if (!gameId) {
+        valid = false;
+        showErrorToast('Please enter a game code');
+      }
 
-    if (!valid) {
-      return;
-    }
-    if (socket.connected) {
-      socket.disconnect();
-    }
+      if (!valid) {
+        return;
+      }
+      if (socket?.connected) {
+        socket.disconnect();
+      }
 
-    // connect to game
-    setSocketQuery({
-      type: socketQueryType.JOIN_GAME,
-      username: name,
-      gameId: gameId.toLowerCase(),
-    });
+      // connect to game
+      setSocketQuery({
+        type: socketQueryType.JOIN_GAME,
+        username: name,
+        gameId: gameId.toLowerCase(),
+      });
 
-    socket.connect();
+      socket?.on('join-game', socketOnJoinGame);
+      socket?.on('connect_error', () => {
+        showErrorToast('Could not connect to game');
+        setLoadingJoinGame(false);
+      });
+      socket?.on('disconnect', () => {
+        showErrorToast('Could not connect to game');
+        setLoadingJoinGame(false);
+      });
+
+      socket.connect();
+    } catch (err) {
+      console.error(err);
+      showErrorToast('Could not connect to game');
+      setLoadingJoinGame(false);
+    }
   }
 
   async function handleCreateGame() {
     if (showCreateGame) {
       setLoadingCreateGame(true);
-      let valid = true;
-      if (!name) {
-        valid = false;
-        showErrorToast('Please enter a name');
-      }
-      if (!maxRounds) {
-        valid = false;
-        showErrorToast('Please enter a max number of rounds');
-      }
-      if (!roundDuration) {
-        valid = false;
-        showErrorToast('Please enter a round duration');
-      }
-      if (!startingMoney) {
-        valid = false;
-        showErrorToast('Please enter a starting money amount');
-      }
-      if (!targetMoney) {
-        valid = false;
-        showErrorToast('Please enter a target money multiplier');
-      }
-      if (!maxPlayers) {
-        valid = false;
-        showErrorToast('Please enter a max number of players');
-      }
+      try {
+        let valid = true;
+        if (!name) {
+          valid = false;
+          showErrorToast('Please enter a name');
+        }
+        if (!maxRounds) {
+          valid = false;
+          showErrorToast('Please enter a max number of rounds');
+        }
+        if (!roundDuration) {
+          valid = false;
+          showErrorToast('Please enter a round duration');
+        }
+        if (!startingMoney) {
+          valid = false;
+          showErrorToast('Please enter a starting money amount');
+        }
+        if (!targetMoney) {
+          valid = false;
+          showErrorToast('Please enter a target money multiplier');
+        }
+        if (!maxPlayers) {
+          valid = false;
+          showErrorToast('Please enter a max number of players');
+        }
 
-      if (!valid) return;
+        if (!valid) return;
 
-      setSocketQuery({
-        type: socketQueryType.CREATE_GAME,
-        username: name,
-        maxGameTurns: parseInt(maxRounds),
-        roundDurationSeconds: parseInt(roundDuration),
-        startingMoney: parseInt(startingMoney),
-        targetMoney: parseInt(startingMoney) * parseInt(targetMoney),
-        maxPlayers: parseInt(maxPlayers),
-      });
+        if (socket?.connected) {
+          socket.disconnect();
+        }
 
-      socket.connect();
+        setSocketQuery({
+          type: socketQueryType.CREATE_GAME,
+          username: name,
+          maxGameTurns: parseInt(maxRounds),
+          roundDurationSeconds: parseInt(roundDuration),
+          startingMoney: parseInt(startingMoney),
+          targetMoney: parseInt(startingMoney) * parseFloat(targetMoney),
+          maxPlayers: parseInt(maxPlayers),
+        });
+
+        socket?.on('join-game', socketOnJoinGame);
+        socket?.on('connect_error', () => {
+          showErrorToast('Could not connect to game');
+          setLoadingJoinGame(false);
+        });
+        socket?.on('disconnect', () => {
+          showErrorToast('Could not connect to game');
+          setLoadingJoinGame(false);
+        });
+
+        socket.connect();
+      } catch (err) {
+        console.error(err);
+        showErrorToast('Could not connect to game');
+        setLoadingJoinGame(false);
+      }
 
       setLoadingCreateGame(false);
     } else {

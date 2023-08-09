@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import { Dropdown, Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import {
@@ -10,11 +10,11 @@ import {
   VictoryLine,
   VictoryZoomContainer,
 } from 'victory';
-import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { socket } from '../socket';
 import TextInput from '../shared/TextInput';
 import PlayerAvatar from '../shared/PlayerAvatar';
-import { Minus, ArrowDownLine, ArrowUpLine } from '@rsuite/icons';
-import { GameState } from '../../../game.mjs';
+import { ArrowDownLine, ArrowUpLine, Minus } from '@rsuite/icons';
 
 function Game() {
   const location = useLocation();
@@ -32,10 +32,10 @@ function Game() {
   const [stockData, setStockData] = useState(location.state.stockData);
   const symbols = Object.keys(location.state.stockData[0]);
   const [selectedSymbol, setSelectedSymbol] = useState(symbols[0]);
-  const [timeRemainingForDay, setTimeRemainingForDay] = useState(
-    game.settings.roundDurationSeconds -
-      (Date.now() - game.startTimestamp) / 1000
+  const [nextRoundTimestamp, setNextRoundTimestamp] = useState(
+    location.state.nextRoundTimestamp
   );
+  const [round, setRound] = useState(location.state.round + 1);
 
   function showErrorToast(message) {
     toast.error(message, {
@@ -50,61 +50,13 @@ function Game() {
     });
   }
 
-  useEffect(() => {
-    console.log(location.state);
-  }, []);
-
   async function handleBuy(symbol, quantity) {
-    const response = await fetch('http://localhost:3000/buy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        gameId: game.id,
-        playerId: localPlayer.id,
-        symbol,
-        quantity,
-      }),
-    }).catch((err) => {
-      console.error(err);
-      showErrorToast(err);
-    });
-
+    console.log('buy');
+    // socket.emit('buy', {
+    //     symbol: symbol,
+    //     quantity: quantity,
+    // });
     try {
-      if (response) {
-        const data = await response.json();
-        console.log('handle buy data', data);
-        if (response.status === 200) {
-          const gameState = data.gameState;
-          if (!gameState) {
-            throw new Error('gameState not found');
-          }
-
-          if (gameState == GameState.waiting) {
-            console.log('game not yet started inside game.jsx');
-            showErrorToast("game hasn't started yet");
-            navigate('/');
-          } else if (gameState == GameState.active) {
-            // update localPlayer
-            setLocalPlayer(data.player);
-          } else if (gameState == GameState.finished) {
-            // route to scoreboard
-            const url = new URL(window.location);
-            url.searchParams.delete('code');
-            window.history.replaceState({}, '', url);
-            navigate('/scoreboard', {
-              state: {
-                gameState: data.gameState,
-                winner: data.winner,
-                loser: data.loser,
-              },
-            });
-          }
-        } else {
-          console.log('error:', response.status, data);
-        }
-      }
     } catch (error) {
       console.error(error);
       showErrorToast(error);
@@ -112,56 +64,12 @@ function Game() {
   }
 
   async function handleSell(symbol, quantity) {
-    const response = await fetch('http://localhost:3000/sell', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        gameId: game.id,
-        playerId: localPlayer.id,
-        symbol,
-        quantity,
-      }),
-    }).catch((err) => {
-      console.error(err);
-      showErrorToast(err);
-    });
-
     try {
-      if (response) {
-        const data = await response.json();
-        console.log('handle buy data', data);
-        if (response.status === 200) {
-          const gameState = data.gameState;
-          if (!gameState) {
-            throw new Error('gameState not found');
-          }
-
-          if (gameState == GameState.waiting) {
-            console.log('game not yet started inside game.jsx');
-            showErrorToast("game hasn't started yet");
-            navigate('/');
-          } else if (gameState == GameState.active) {
-            // update localPlayer
-            setLocalPlayer(data.player);
-          } else if (gameState == GameState.finished) {
-            // route to scoreboard
-            const url = new URL(window.location);
-            url.searchParams.delete('code');
-            window.history.replaceState({}, '', url);
-            navigate('/scoreboard', {
-              state: {
-                gameState: data.gameState,
-                winner: data.winner,
-                loser: data.loser,
-              },
-            });
-          }
-        } else {
-          console.log('error:', response.status, data);
-        }
-      }
+      console.log('sell');
+      // socket.emit('sell', {
+      //     symbol: symbol,
+      //     quantity: quantity,
+      // });
     } catch (error) {
       console.error(error);
       showErrorToast(error);
@@ -169,108 +77,56 @@ function Game() {
   }
 
   useEffect(() => {
-    let abortController;
+    console.log(location.state);
 
-    async function update(abortController) {
-      const response = await fetch(
-        `http://localhost:3000/update/${game.id}/${localPlayer.id}`,
-        {
-          signal: abortController.signal,
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      ).catch((err) => {
-        console.error(err);
-        showErrorToast(err);
+    socket.on('game-update', (data) => {
+      console.log('game update', data);
+
+      // update players
+      setPlayers((previousPlayers) => {
+        return data.players.map((player) => {
+          return {
+            ...player,
+            previousNetWorth:
+              previousPlayers.find((oldPlayer) => oldPlayer.id === player.id)
+                ?.netWorth || player.netWorth,
+          };
+        });
       });
 
-      // handle response
-      try {
-        if (response) {
-          const data = await response.json();
-          console.log('update data', data);
-          if (response.status === 200) {
-            const gameState = data.gameState;
-            if (!gameState) {
-              throw new Error('gameState not found');
-            }
+      // update stock data
+      setStockData((previousStockData) => {
+        return [...previousStockData, data.newStockData];
+      });
+    });
 
-            if (gameState == GameState.waiting) {
-              console.log('game not yet started inside game.jsx');
-              showErrorToast("game hasn't started yet");
-              navigate('/');
-            } else if (gameState == GameState.active) {
-              // update player net worths on the right
-              setPlayers((oldPlayers) => {
-                return data.players.map((player) => {
-                  return {
-                    ...player,
-                    previousNetWorth: oldPlayers.find(
-                      (oldPlayer) => oldPlayer.id === player.id
-                    ).netWorth,
-                  };
-                });
-              });
+    socket.on('game-over', (data) => {
+      const winner = data.winner;
+      const losers = data.losers;
+      console.log('winner', winner);
+      console.log('losers', losers);
 
-              // update local player
-              setLocalPlayer(data.player);
+      const url = new URL(window.location);
+      url.searchParams.delete('code');
+      window.history.replaceState({}, '', url);
 
-              // update stock data
-              setStockData(data.stockData);
-            } else if (gameState == GameState.finished) {
-              // route to scoreboard
-              const url = new URL(window.location);
-              url.searchParams.delete('code');
-              window.history.replaceState({}, '', url);
-              navigate('/scoreboard', {
-                state: {
-                  gameState: data.gameState,
-                  winner: data.winner,
-                  loser: data.loser,
-                },
-              });
-            }
-          } else {
-            console.log('error:', response.status, data);
-          }
-        }
-      } catch (err) {
-        console.error(err);
-        showErrorToast(err);
-      }
-    }
-    const updateIntervalId = setInterval(async () => {
-      abortController?.abort();
-      abortController = new AbortController();
-      try {
-        update(abortController);
-        // update time remaining for day
-        setTimeRemainingForDay(game.settings.roundDurationSeconds);
-      } catch (error) {
-        console.error(error);
-        showErrorToast(error);
-      }
-    }, game.settings.roundDurationSeconds * 1000);
+      navigate('/scoreboard', {
+        state: {
+          winner: winner,
+          losers: losers,
+        },
+      });
+    });
 
-    setTimeout(() => {}, Math.round(game.startTimestamp / 1000));
-
-    const timeRemainingForDayIntervalId = setInterval(() => {
-      setTimeRemainingForDay((oldTime) => Math.max(0, oldTime - 1));
-    }, 1000);
+    socket.on('portfolio-update', (data) => {
+      console.log('portfolio update', data);
+      setLocalPlayer(data);
+    });
 
     return () => {
-      clearInterval(updateIntervalId);
-      clearInterval(timeRemainingForDayIntervalId);
-      abortController?.abort();
+      socket?.off();
     };
   }, []);
-
-  // ! temp
-  useEffect(() => {
-    console.log('timeRemainingForDay:', timeRemainingForDay);
-  }, [timeRemainingForDay]);
 
   return (
     <React.Fragment>
@@ -331,6 +187,7 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
         height: graphRef.current.clientHeight,
       });
     }
+
     // Add event listener
     window.addEventListener('resize', handleResize);
     // Call handler right away so state gets updated with initial window size
@@ -783,12 +640,12 @@ function Players({ localPlayer, players }) {
           playerMoney={players[localPlayerIndex].netWorth}
           prevPlayerMoney={players[localPlayerIndex].previousNetWorth}
         />
-        <Player
-          key={players[aiIndex].id}
-          playerName={players[aiIndex].name}
-          playerMoney={players[aiIndex].netWorth}
-          prevPlayerMoney={players[aiIndex].previousNetWorth}
-        />
+        {/*<Player*/}
+        {/*    key={players[aiIndex].id}*/}
+        {/*    playerName={players[aiIndex].name}*/}
+        {/*    playerMoney={players[aiIndex].netWorth}*/}
+        {/*    prevPlayerMoney={players[aiIndex].previousNetWorth}*/}
+        {/*/>*/}
         {players
           .filter(
             (player) => player.id !== localPlayer.id && player.id !== 'ai'

@@ -1,18 +1,18 @@
 import PropTypes from 'prop-types';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import { Close } from '@rsuite/icons';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import { socket } from '../socket';
-import { GameState } from '../../../game.mjs';
 
 function Lobby() {
   const location = useLocation();
+  console.log('location state', location.state);
   const navigate = useNavigate();
   const [game, setGame] = useState(location.state.game);
-  const localPlayer = location.state.player;
-  const [players, setPlayers] = useState(location.state.game.players);
+  const localPlayer = location.state.localPlayer;
+  const [players, setPlayers] = useState(location.state.players);
   const [kickPlayer, setKickPlayer] = useState(null);
   const [loadingStartGame, setLoadingStartGame] = useState(false);
 
@@ -44,18 +44,16 @@ function Lobby() {
       });
     });
 
-    socket.on('start-game', (data) => {
+    socket.on('game-started', (data) => {
       console.log('start-game', data);
       navigate(`/game/${game.id}`, {
         state: {
-          game: {
-            ...game,
-            hostId: data.hostId,
-          },
+          game,
           players: data.players,
           localPlayer,
           stockData: data.stockData,
           nextRoundTimestamp: data.nextRoundTimestamp,
+          round: data.round,
         },
       });
     });
@@ -77,11 +75,7 @@ function Lobby() {
     });
 
     return () => {
-      socket.off('player-joined');
-      socket.off('remove-player');
-      socket.off('start-game');
-      socket.off('new-host');
-      socket.off('disconnect');
+      socket?.off();
     };
   }, []);
 
@@ -104,6 +98,10 @@ function Lobby() {
     // TODO: wait for response from server before turning loading off
     setLoadingStartGame(false);
   }
+
+  useEffect(() => {
+    console.log('players', players);
+  }, []);
 
   return (
     <div
@@ -149,17 +147,21 @@ function Lobby() {
           }
         >
           {players &&
-            players.map((player) => (
-              <Player
-                name={player.name}
-                handleKick={() => handleKick(player)}
-                key={player.id}
-                isHost={game.hostId === player.id}
-                showKick={
-                  game.hostId === localPlayer.id && player.id !== localPlayer.id
-                }
-              />
-            ))}
+            players.map((player) => {
+              console.log('players foreach', player);
+              return (
+                <Player
+                  name={player.name}
+                  handleKick={() => handleKick(player)}
+                  key={player.id}
+                  isHost={game.hostId === player.id}
+                  showKick={
+                    game.hostId === localPlayer.id &&
+                    player.id !== localPlayer.id
+                  }
+                />
+              );
+            })}
         </div>
         {game.hostId === localPlayer.id && (
           <button
