@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import { Close } from '@rsuite/icons';
+import { ToastContainer, toast } from 'react-toastify';
 import { GameState } from '../../../game.mjs';
 
 function Lobby() {
@@ -13,6 +14,19 @@ function Lobby() {
   const [players, setPlayers] = useState(location.state.game.players);
   const [kickPlayer, setKickPlayer] = useState(null);
   const [loadingStartGame, setLoadingStartGame] = useState(false);
+
+  function showErrorToast(message) {
+    toast.error(message, {
+      position: 'top-right',
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: 'light',
+    });
+  }
 
   useEffect(() => {
     // set interval to poll for players
@@ -27,9 +41,11 @@ function Lobby() {
           headers: {
             'Content-Type': 'application/json',
           },
-          // TODO: show error to user
         }
-      ).catch((err) => console.error(err));
+      ).catch((err) => {
+        console.error(err);
+        showErrorToast(err);
+      });
 
       // handle response
       try {
@@ -72,7 +88,7 @@ function Lobby() {
         }
       } catch (err) {
         console.error(err);
-        // TODO: show error to user
+        showErrorToast(err);
       }
     }, 2000);
 
@@ -109,8 +125,10 @@ function Lobby() {
         requestId: localPlayer.id,
         playerId: id,
       }),
-      // TODO: show error to user
-    }).catch((err) => console.error(err));
+    }).catch((err) => {
+      console.error(err);
+      showErrorToast(err);
+    });
 
     try {
       if (!response) {
@@ -151,7 +169,7 @@ function Lobby() {
       }
     } catch (error) {
       console.error(error);
-      // TODO: show error to user
+      showErrorToast(error.message);
     }
 
     setKickPlayer(null);
@@ -168,8 +186,10 @@ function Lobby() {
         requestId: localPlayer.id,
         gameId: game.id,
       }),
-      // TODO: show error to user
-    }).catch((err) => console.error(err));
+    }).catch((err) => {
+      console.error(err);
+      showErrorToast(err);
+    });
 
     // handle response
     try {
@@ -180,7 +200,7 @@ function Lobby() {
           const data = await response.json();
           console.log(data);
           console.log('error:', response.status, data);
-          // TODO: show error to user
+          showErrorToast(data.error ?? data.message ?? 'unknown error');
         }
       }
     } catch (err) {
@@ -206,8 +226,10 @@ function Lobby() {
         gameId: game.id,
         playerId: localPlayer.id,
       }),
-      // TODO: show error to user
-    }).catch((err) => console.error(err));
+    }).catch((err) => {
+      console.error(err);
+      showErrorToast(err);
+    });
 
     try {
       if (!response) {
@@ -250,7 +272,7 @@ function Lobby() {
       }
     } catch (error) {
       console.error(error);
-      // TODO: show error to user
+      showErrorToast(error);
     } finally {
       setLoadingStartGame(false);
     }
@@ -337,6 +359,7 @@ function Lobby() {
           </div>
         </div>
       )}
+      <ToastContainer />
     </div>
   );
 }

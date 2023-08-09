@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import { ArrowLeftLine } from '@rsuite/icons';
-
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import DividerWithText from '../shared/DividerWithText';
 
 // TODO: store user id in local storage or session storage or cookie
@@ -33,6 +34,19 @@ function Home() {
 
   const navigate = useNavigate();
 
+  function showErrorToast(message) {
+    toast.error(message, {
+      position: 'top-right',
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: 'light',
+    });
+  }
+
   async function handleJoinGame() {
     setLoadingJoinGame(true);
     // TODO: validate
@@ -40,12 +54,12 @@ function Home() {
     // check name
     if (!name) {
       valid = false;
-      // TODO: show name error
+      showErrorToast('Please enter a name');
     }
 
     if (!gameId) {
       valid = false;
-      // TODO: show game id error
+      showErrorToast('Please enter a game code');
     }
 
     if (!valid) {
@@ -62,8 +76,10 @@ function Home() {
         name,
         gameId: gameId.toLowerCase(),
       }),
-      // TODO: show error to user
-    }).catch((err) => console.error(err));
+    }).catch((err) => {
+      console.error(err);
+      showErrorToast(err);
+    });
 
     // handle response
     try {
@@ -77,7 +93,7 @@ function Home() {
           navigate(`/lobby/${data.game.id}`, { state: data });
         } else {
           console.log('error:', response.status, data);
-          // TODO: show error to user
+          showErrorToast(data.error ?? data.message ?? 'unknown error');
         }
       }
     } finally {
@@ -94,24 +110,29 @@ function Home() {
       let valid = true;
       if (!name) {
         valid = false;
+        showErrorToast('Please enter a name');
       }
       if (!maxRounds) {
         valid = false;
+        showErrorToast('Please enter a max number of rounds');
       }
       if (!roundDuration) {
         valid = false;
+        showErrorToast('Please enter a round duration');
       }
       if (!startingMoney) {
         valid = false;
+        showErrorToast('Please enter a starting money amount');
       }
       if (!targetMoney) {
         valid = false;
+        showErrorToast('Please enter a target money multiplier');
       }
       if (!maxPlayers) {
         valid = false;
+        showErrorToast('Please enter a max number of players');
       }
 
-      console.log('valid:', valid);
       if (!valid) return;
 
       const response = await fetch('http://localhost:3000/create-new-game', {
@@ -127,8 +148,10 @@ function Home() {
           targetMoney: startingMoney * targetMoney,
           maxPlayers,
         }),
-        // TODO: show error to user
-      }).catch((err) => console.error(err));
+      }).catch((err) => {
+        console.error(err);
+        showErrorToast(err);
+      });
 
       try {
         if (response) {
@@ -141,7 +164,7 @@ function Home() {
             navigate(`/lobby/${data.game.id}`, { state: data });
           } else {
             console.log('error:', response.status, data);
-            // TODO: show error to user
+            showErrorToast(data.error ?? data.message ?? 'unknown error');
           }
         }
       } finally {
@@ -153,49 +176,52 @@ function Home() {
   }
 
   return (
-    <div className="center-absolute">
-      <div className="center-horizontally">
-        <h1>STONKS</h1>
-      </div>
-      <div className="container">
-        {showCreateGame && <GoBack setShowCreateGame={setShowCreateGame} />}
-        <input
-          type="text"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        {showCreateGame ? (
-          <CreateGame
-            maxRounds={maxRounds}
-            setMaxRounds={setMaxRounds}
-            roundDuration={roundDuration}
-            setRoundDuration={setRoundDuration}
-            startingMoney={startingMoney}
-            setStartingMoney={setStartingMoney}
-            targetMoney={targetMoney}
-            setTargetMoney={setTargetMoney}
-            maxPlayers={maxPlayers}
-            setMaxPlayers={setMaxPlayers}
+    <>
+      <div className="center-absolute">
+        <div className="center-horizontally">
+          <h1>STONKS</h1>
+        </div>
+        <div className="container">
+          {showCreateGame && <GoBack setShowCreateGame={setShowCreateGame} />}
+          <input
+            type="text"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
           />
-        ) : (
-          <JoinGame
-            name={name}
-            gameId={gameId}
-            setGameId={setGameId}
-            handleJoinGame={handleJoinGame}
-            loadingJoinGame={loadingJoinGame}
-          />
-        )}
-        <button
-          onClick={handleCreateGame}
-          disabled={(showCreateGame && !name) || loadingCreateGame}
-        >
-          {/* // TODO: consider replacing loading text with rsuite loading spinner */}
-          {loadingCreateGame ? 'Loading...' : 'Create Game'}
-        </button>
+          {showCreateGame ? (
+            <CreateGame
+              maxRounds={maxRounds}
+              setMaxRounds={setMaxRounds}
+              roundDuration={roundDuration}
+              setRoundDuration={setRoundDuration}
+              startingMoney={startingMoney}
+              setStartingMoney={setStartingMoney}
+              targetMoney={targetMoney}
+              setTargetMoney={setTargetMoney}
+              maxPlayers={maxPlayers}
+              setMaxPlayers={setMaxPlayers}
+            />
+          ) : (
+            <JoinGame
+              name={name}
+              gameId={gameId}
+              setGameId={setGameId}
+              handleJoinGame={handleJoinGame}
+              loadingJoinGame={loadingJoinGame}
+            />
+          )}
+          <button
+            onClick={handleCreateGame}
+            disabled={(showCreateGame && !name) || loadingCreateGame}
+          >
+            {/* // TODO: consider replacing loading text with rsuite loading spinner */}
+            {loadingCreateGame ? 'Loading...' : 'Create Game'}
+          </button>
+        </div>
       </div>
-    </div>
+      <ToastContainer />
+    </>
   );
 }
 

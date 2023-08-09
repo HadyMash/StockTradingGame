@@ -14,10 +14,6 @@ import PlayerAvatar from '../shared/PlayerAvatar';
 import { Minus, ArrowDownLine, ArrowUpLine } from '@rsuite/icons';
 import { GameState } from '../../../game.mjs';
 
-// TODO: see where i can replace state with refs
-
-// TODO: get code from memory router params and url as fallback
-// TODO: make game page responsive
 function Game() {
   const location = useLocation();
   const navigate = useNavigate();
