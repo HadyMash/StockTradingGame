@@ -157,8 +157,8 @@ function Game() {
 
   useEffect(() => {
     let abortController;
-    const updateIntervalId = setInterval(async () => {
-      abortController = new AbortController();
+
+    async function update(abortController) {
       const response = await fetch(
         `http://localhost:3000/update/${game.id}/${localPlayer.id}`,
         {
@@ -225,6 +225,16 @@ function Game() {
         }
       } catch (err) {
         console.error(err);
+        // TODO: show error to user
+      }
+    }
+    const updateIntervalId = setInterval(async () => {
+      abortController?.abort();
+      abortController = new AbortController();
+      try {
+        update(abortController);
+      } catch (error) {
+        console.error(error);
         // TODO: show error to user
       }
     }, game.settings.roundDurationSeconds * 1000);
