@@ -144,47 +144,51 @@ function Home() {
   }
 
   return (
-    <div className="center-absolute">
-      <div className="center-horizontally">
-        <h1>STONKS</h1>
-      </div>
-      <div className="container">
-        {showCreateGame && <GoBack setShowCreateGame={setShowCreateGame} />}
-        <input
-          type="text"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        {showCreateGame ? (
-          <CreateGame
-            maxRounds={maxRounds}
-            setMaxRounds={setMaxRounds}
-            roundDuration={roundDuration}
-            setRoundDuration={setRoundDuration}
-            startingMoney={startingMoney}
-            setStartingMoney={setStartingMoney}
-            targetMoney={targetMoney}
-            setTargetMoney={setTargetMoney}
-            maxPlayers={maxPlayers}
-            setMaxPlayers={setMaxPlayers}
+    <div>
+      <div className="cool-background"> </div>
+
+      <div className="center-absolute">
+        <div className="center-horizontally">
+          <h1>STONKS</h1>
+        </div>
+        <div className="container">
+          {showCreateGame && <GoBack setShowCreateGame={setShowCreateGame} />}
+          <input
+            type="text"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
           />
-        ) : (
-          <JoinGame
-            name={name}
-            gameId={gameId}
-            setGameId={setGameId}
-            handleJoinGame={handleJoinGame}
-            loadingJoinGame={loadingJoinGame}
-          />
-        )}
-        <button
-          onClick={handleCreateGame}
-          disabled={(showCreateGame && !name) || loadingCreateGame}
-        >
-          {/* // TODO: consider replacing loading text with rsuite loading spinner */}
-          {loadingCreateGame ? 'Loading...' : 'Create Game'}
-        </button>
+          {showCreateGame ? (
+            <CreateGame
+              maxRounds={maxRounds}
+              setMaxRounds={setMaxRounds}
+              roundDuration={roundDuration}
+              setRoundDuration={setRoundDuration}
+              startingMoney={startingMoney}
+              setStartingMoney={setStartingMoney}
+              targetMoney={targetMoney}
+              setTargetMoney={setTargetMoney}
+              maxPlayers={maxPlayers}
+              setMaxPlayers={setMaxPlayers}
+            />
+          ) : (
+            <JoinGame
+              name={name}
+              gameId={gameId}
+              setGameId={setGameId}
+              handleJoinGame={handleJoinGame}
+              loadingJoinGame={loadingJoinGame}
+            />
+          )}
+          <button
+            onClick={handleCreateGame}
+            disabled={(showCreateGame && !name) || loadingCreateGame}
+          >
+            {/* // TODO: consider replacing loading text with rsuite loading spinner */}
+            {loadingCreateGame ? 'Loading...' : 'Create Game'}
+          </button>
+        </div>
       </div>
     </div>
   );
