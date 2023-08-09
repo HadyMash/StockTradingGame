@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import { Close } from '@rsuite/icons';
 import { ToastContainer, toast } from 'react-toastify';
+import { socket } from '../socket';
 import { GameState } from '../../../game.mjs';
 
 function Lobby() {
@@ -29,271 +30,79 @@ function Lobby() {
   }
 
   useEffect(() => {
-    // set interval to poll for players
-    let abortController;
-    const updateIntervalId = setInterval(async () => {
-      abortController = new AbortController();
-      const response = await fetch(
-        `http://localhost:3000/update/${game.id}/${localPlayer.id}`,
-        {
-          signal: abortController.signal,
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      ).catch((err) => {
-        console.error(err);
-        showErrorToast(err);
+    socket.on('player-joined', (data) => {
+      console.log('player-joined', data);
+      setPlayers((previousPlayers) => {
+        return [...previousPlayers, data.player];
       });
+    });
 
-      // handle response
-      try {
-        if (response) {
-          const data = await response.json();
-          console.log(data);
-          if (response.status === 200) {
-            const gameState = data.gameState;
-            if (!gameState) {
-              throw new Error('gameState not found');
-            }
-            console.log('updating players and game');
-            setPlayers(data.players);
-            setGame((previousGame) => {
-              return {
-                ...previousGame,
-                hostId: data.hostId,
-              };
-            });
+    socket.on('remove-player', (playerId) => {
+      console.log('remove-player', playerId);
+      setPlayers((previousPlayers) => {
+        return previousPlayers.filter((player) => player.id !== playerId);
+      });
+    });
 
-            if (gameState == GameState.active) {
-              navigate(`/game/${game.id}`, {
-                state: {
-                  game: {
-                    ...game,
-                    hostId: data.hostId,
-                    startTimestamp: data.startTimestamp,
-                  },
-                  players: data.players,
-                  localPlayer,
-                  stockData: data.stockData,
-                },
-              });
-            } else if (gameState == GameState.scoreboard) {
-              navigate('/scoreboard', {
-                state: {
-                  gameState: data.gameState,
-                  winner: data.winner,
-                  loser: data.loser,
-                },
-              });
-            }
-          } else {
-            console.log('error:', response.status, data);
-          }
-        }
-      } catch (err) {
-        console.error(err);
-        showErrorToast(err);
-      }
-    }, 2000);
+    socket.on('start-game', (data) => {
+      console.log('start-game', data);
+      navigate(`/game/${game.id}`, {
+        state: {
+          game: {
+            ...game,
+            hostId: data.hostId,
+          },
+          players: data.players,
+          localPlayer,
+          stockData: data.stockData,
+          nextRoundTimestamp: data.nextRoundTimestamp,
+        },
+      });
+    });
+
+    socket.on('new-host', (hostId) => {
+      console.log('new-host', hostId);
+      setGame((previousGame) => {
+        return {
+          ...previousGame,
+          hostId,
+        };
+      });
+    });
+
+    // TODO: don't route to home immediately after implementing connection recovery
+    socket.on('disconnect', () => {
+      console.log('disconnect');
+      navigate('/home');
+    });
 
     return () => {
-      clearInterval(updateIntervalId);
-      abortController?.abort();
+      socket.off('player-joined');
+      socket.off('remove-player');
+      socket.off('start-game');
+      socket.off('new-host');
+      socket.off('disconnect');
     };
   }, []);
-
-  useEffect(() => {
-    console.log(!players.find((player) => player.id === localPlayer.id));
-    if (!players.find((player) => player.id === localPlayer.id)) {
-      // player has been kicked
-      console.log('kicked');
-      const url = new URL(window.location);
-      url.searchParams.delete('code');
-      window.history.replaceState({}, '', url);
-      navigate('/home');
-    }
-  }, [players]);
 
   function handleKick(player) {
     setKickPlayer(player);
   }
 
   async function kick(id) {
-    const response = await fetch('http://localhost:3000/remove-player', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        gameId: game.id,
-        requestId: localPlayer.id,
-        playerId: id,
-      }),
-    }).catch((err) => {
-      console.error(err);
-      showErrorToast(err);
-    });
-
-    try {
-      if (!response) {
-        throw new Error('no response');
-      }
-      const data = await response.json();
-      console.log(data);
-
-      if (response.status === 200) {
-        const gameState = data.gameState;
-        if (!gameState) {
-          throw new Error('gameState not found');
-        }
-        setPlayers(data.players);
-        setGame((previousGame) => {
-          return {
-            ...previousGame,
-            hostId: data.hostId,
-          };
-        });
-        if (gameState == GameState.active) {
-          navigate(`/game/${game.id}`, {
-            state: {
-              game: {
-                ...game,
-                hostId: data.hostId,
-              },
-              players: data.players,
-              localPlayer,
-              stockData: data.stockData,
-            },
-          });
-        } else if (gameState == GameState.finished) {
-          navigate('/scoreboard', {
-            state: {
-              gameState: data.gameState,
-              winner: data.winner,
-              loser: data.loser,
-            },
-          });
-        }
-      } else {
-        console.log('error:', response.status, data);
-      }
-    } catch (error) {
-      console.error(error);
-      showErrorToast(error.message);
-    }
-
+    socket.emit('kick', id);
     setKickPlayer(null);
   }
 
   async function handleLeave() {
-    const response = await fetch('http://localhost:3000/remove-player', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        playerId: localPlayer.id,
-        requestId: localPlayer.id,
-        gameId: game.id,
-      }),
-    }).catch((err) => {
-      console.error(err);
-      showErrorToast(err);
-    });
-
-    // handle response
-    try {
-      if (response) {
-        if (response.status === 204 || response.status === 200) {
-          routeToHomePage();
-        } else {
-          const data = await response.json();
-          console.log(data);
-          console.log('error:', response.status, data);
-          showErrorToast(data.error ?? data.message ?? 'unknown error');
-        }
-      }
-    } catch (err) {
-      console.log('error:', err);
-    }
-  }
-
-  function routeToHomePage() {
-    const url = new URL(window.location);
-    url.searchParams.delete('code');
-    window.history.replaceState({}, '', url);
-    navigate(`/home`);
+    socket.disconnect();
   }
 
   async function handleStartGame() {
     setLoadingStartGame(true);
-    const response = await fetch('http://localhost:3000/start-game', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        gameId: game.id,
-        playerId: localPlayer.id,
-      }),
-    }).catch((err) => {
-      console.error(err);
-      showErrorToast(err);
-    });
-
-    try {
-      if (!response) {
-        throw new Error('no response');
-      }
-      const data = await response.json();
-      console.log(data);
-
-      if (response.status === 200) {
-        const gameState = data.gameState;
-        if (!gameState) {
-          throw new Error('gameState not found');
-        }
-        setPlayers(data.players);
-        setGame((previousGame) => {
-          return {
-            ...previousGame,
-            hostId: data.hostId,
-            startTimestamp: data.startTimestamp,
-          };
-        });
-        if (gameState == GameState.active) {
-          navigate(`/game/${game.id}`, {
-            state: {
-              game: {
-                ...game,
-                hostId: data.hostId,
-                startTimestamp: data.startTimestamp,
-              },
-              players: data.players,
-              localPlayer,
-              stockData: data.stockData,
-            },
-          });
-        } else {
-          navigate('/scoreboard', {
-            state: {
-              gameState: data.gameState,
-              winner: data.winner,
-              loser: data.loser,
-            },
-          });
-        }
-      } else {
-        console.log('error:', response.status, data);
-      }
-    } catch (error) {
-      console.error(error);
-      showErrorToast(error);
-    } finally {
-      setLoadingStartGame(false);
-    }
+    socket.emit('start-game');
+    // TODO: wait for response from server before turning loading off
+    setLoadingStartGame(false);
   }
 
   return (
