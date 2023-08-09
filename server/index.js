@@ -460,6 +460,7 @@ app.post('/start-game', async (req, res) => {
           netWorth: game.settings.startingMoney,
         },
       ],
+      startTimestamp: game.startTimestamp,
       hostId: game.hostId,
       player: game.players[playerId],
       stockData: stockData,
@@ -541,43 +542,6 @@ app.post('/buy', async (req, res) => {
 
     res.status(200).json({
       gameState: response.resource.state,
-      players: [
-        ...Object.keys(response.resource.players).map((playerId) => {
-          // calculate player's net worth
-          console.log('playerId', playerId);
-          let netWorth = response.resource.players[playerId].money;
-          console.log('netWorth', netWorth);
-          for (
-            let i = 0;
-            i < Object.keys(response.resource.players[playerId].stocks).length;
-            i++
-          ) {
-            const symbol = Object.keys(
-              response.resource.players[playerId].stocks
-            )[i];
-            console.log('symbol', symbol);
-            const quantity = response.resource.players[playerId].stocks[symbol];
-            console.log('quantity', quantity);
-            const price = stockData[symbol].price;
-            console.log('price', price);
-
-            netWorth += quantity * price;
-          }
-          console.log('netWorth', netWorth);
-
-          return {
-            id: playerId,
-            name: response.resource.players[playerId].name,
-            netWorth: netWorth,
-          };
-        }),
-        {
-          id: 'ai',
-          name: 'AI',
-          // TODO: test if day number starts at 0 or 1 (i believe it starts at 0 because of the math floor)
-          netWorth: response.resource.aiNetWorthOverTime[dayNumber],
-        },
-      ],
       player: response.resource.players[playerId],
     });
   } catch (err) {
@@ -658,43 +622,6 @@ app.post('/sell', async (req, res) => {
 
     res.status(200).json({
       gameState: response.resource.state,
-      players: [
-        ...Object.keys(response.resource.players).map((playerId) => {
-          // calculate player's net worth
-          console.log('playerId', playerId);
-          let netWorth = response.resource.players[playerId].money;
-          console.log('netWorth', netWorth);
-          for (
-            let i = 0;
-            i < Object.keys(response.resource.players[playerId].stocks).length;
-            i++
-          ) {
-            const symbol = Object.keys(
-              response.resource.players[playerId].stocks
-            )[i];
-            console.log('symbol', symbol);
-            const quantity = response.resource.players[playerId].stocks[symbol];
-            console.log('quantity', quantity);
-            const price = stockData[symbol].price;
-            console.log('price', price);
-
-            netWorth += quantity * price;
-          }
-          console.log('netWorth', netWorth);
-
-          return {
-            id: playerId,
-            name: response.resource.players[playerId].name,
-            netWorth: netWorth,
-          };
-        }),
-        {
-          id: 'ai',
-          name: 'AI',
-          // TODO: test if day number starts at 0 or 1 (i believe it starts at 0 because of the math floor)
-          netWorth: response.resource.aiNetWorthOverTime[dayNumber],
-        },
-      ],
       player: response.resource.players[playerId],
     });
   } catch (err) {
@@ -795,6 +722,8 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
         }
       }
 
+      // TODO: check for end conditions
+
       // console.log('stock data', stockData);
 
       response = {
@@ -810,7 +739,7 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
             ) {
               const symbol = Object.keys(game.players[playerId].stocks)[i];
               const quantity = game.players[playerId].stocks[symbol];
-              const price = stockData[20 + dayNumber];
+              const price = stockData[20 + dayNumber - 1][symbol].price;
 
               netWorth += quantity * price;
             }
@@ -830,6 +759,7 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
         ],
         player: game.players[playerId],
         hostId: game.hostId,
+        startTimestamp: game.startTimestamp,
         stockData: stockData,
       };
       // console.log('response', response);

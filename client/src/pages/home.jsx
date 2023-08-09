@@ -13,12 +13,21 @@ function Home() {
   const [showCreateGame, setShowCreateGame] = useState(false);
   // TODO: replace name state with a ref
   const [name, setName] = useState('');
-  const [gameId, setGameId] = useState(params.code?.toUpperCase() ?? '');
+  const [gameId, setGameId] = useState(
+    params.code?.toUpperCase() ??
+      new URL(window.location).searchParams.get('code') ??
+      ''
+  );
+  {
+    const url = new URL(window.location);
+    url.searchParams.delete('code');
+    window.history.replaceState({}, '', url);
+  }
   const [maxRounds, setMaxRounds] = useState(20);
-  const [roundDuration, setRoundDuration] = useState(15);
-  const [startingMoney, setStartingMoney] = useState(500);
+  const [roundDuration, setRoundDuration] = useState(20);
+  const [startingMoney, setStartingMoney] = useState(1000);
   const [targetMoney, setTargetMoney] = useState(1.5);
-  const [maxPlayers, setMaxPlayers] = useState(5);
+  const [maxPlayers, setMaxPlayers] = useState(4);
   const [loadingJoinGame, setLoadingJoinGame] = useState(false);
   const [loadingCreateGame, setLoadingCreateGame] = useState(false);
 

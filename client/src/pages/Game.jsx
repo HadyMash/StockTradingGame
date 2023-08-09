@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Dropdown, Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
@@ -21,43 +21,143 @@ import { GameState } from '../../../game.mjs';
 function Game() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [game, setGame] = React.useState(location.state.game);
-  const [players, setPlayers] = React.useState(location.state.players);
-  const [localPlayer, _setLocalPlayer] = React.useState(
-    location.state.localPlayer
+  const [game, setGame] = useState(location.state.game);
+  const [players, setPlayers] = useState(
+    location.state.players.map((p) => {
+      return {
+        ...p,
+        previousNetWorth: p.netWorth,
+      };
+    })
   );
+  const [localPlayer, _setLocalPlayer] = useState(location.state.localPlayer);
   function setLocalPlayer(newLocalPlayer) {
+    console.log('setLocalPlayer', newLocalPlayer);
     setPreviousLocalPlayer(localPlayer);
     _setLocalPlayer(newLocalPlayer);
   }
-  const [previousLocalPlayer, setPreviousLocalPlayer] = React.useState(
+  const [previousLocalPlayer, setPreviousLocalPlayer] = useState(
     location.state.localPlayer
   );
-  const [stockData, setStockData] = React.useState(location.state.stockData);
+  const [stockData, setStockData] = useState(location.state.stockData);
   const symbols = Object.keys(location.state.stockData[0]);
-  const [selectedSymbol, setSelectedSymbol] = React.useState(symbols[0]);
-  const [timeRemainingForDay, setTimeRemainingForDay] = React.useState(
-    game.settings.roundDurationSeconds
+  const [selectedSymbol, setSelectedSymbol] = useState(symbols[0]);
+  const [timeRemainingForDay, setTimeRemainingForDay] = useState(
+    game.settings.roundDurationSeconds -
+      (Date.now() - game.startTimestamp) / 1000
   );
 
   useEffect(() => {
-    console.log(
-      'game',
-      game,
-      'players',
-      players,
-      'localPlayer',
-      localPlayer,
-      'stockData',
-      stockData,
-      'symbols',
-      symbols,
-      'selectedSymbol',
-      selectedSymbol,
-      'timeRemainingForDay',
-      timeRemainingForDay
-    );
+    console.log(location.state);
   }, []);
+
+  async function handleBuy(symbol, quantity) {
+    const response = await fetch('http://localhost:3000/buy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        gameId: game.id,
+        playerId: localPlayer.id,
+        symbol,
+        quantity,
+      }),
+      // TODO: show error to user
+    }).catch((err) => console.error(err));
+
+    try {
+      if (response) {
+        const data = await response.json();
+        console.log('handle buy data', data);
+        if (response.status === 200) {
+          const gameState = data.gameState;
+          if (!gameState) {
+            throw new Error('gameState not found');
+          }
+
+          if (gameState == GameState.waiting) {
+            // TODO: show error to user and navigate back to home
+            console.log('game not yet started inside game.jsx');
+          } else if (gameState == GameState.active) {
+            // update localPlayer
+            setLocalPlayer(data.player);
+          } else if (gameState == GameState.finished) {
+            // route to scoreboard
+            const url = new URL(window.location);
+            url.searchParams.delete('code');
+            window.history.replaceState({}, '', url);
+            navigate('/scoreboard', {
+              state: {
+                gameState: data.gameState,
+                winner: data.winner,
+                loser: data.loser,
+              },
+            });
+          }
+        } else {
+          console.log('error:', response.status, data);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      // TODO: show error to user
+    }
+  }
+
+  async function handleSell(symbol, quantity) {
+    const response = await fetch('http://localhost:3000/sell', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        gameId: game.id,
+        playerId: localPlayer.id,
+        symbol,
+        quantity,
+      }),
+      // TODO: show error to user
+    }).catch((err) => console.error(err));
+
+    try {
+      if (response) {
+        const data = await response.json();
+        console.log('handle buy data', data);
+        if (response.status === 200) {
+          const gameState = data.gameState;
+          if (!gameState) {
+            throw new Error('gameState not found');
+          }
+
+          if (gameState == GameState.waiting) {
+            // TODO: show error to user and navigate back to home
+            console.log('game not yet started inside game.jsx');
+          } else if (gameState == GameState.active) {
+            // update localPlayer
+            setLocalPlayer(data.player);
+          } else if (gameState == GameState.finished) {
+            // route to scoreboard
+            const url = new URL(window.location);
+            url.searchParams.delete('code');
+            window.history.replaceState({}, '', url);
+            navigate('/scoreboard', {
+              state: {
+                gameState: data.gameState,
+                winner: data.winner,
+                loser: data.loser,
+              },
+            });
+          }
+        } else {
+          console.log('error:', response.status, data);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      // TODO: show error to user
+    }
+  }
 
   useEffect(() => {
     let abortController;
@@ -79,7 +179,7 @@ function Game() {
       try {
         if (response) {
           const data = await response.json();
-          console.log(data);
+          console.log('update data', data);
           if (response.status === 200) {
             const gameState = data.gameState;
             if (!gameState) {
@@ -107,6 +207,9 @@ function Game() {
 
               // update stock data
               setStockData(data.stockData);
+
+              // update time remaining for day
+              setTimeRemainingForDay(game.settings.roundDurationSeconds);
             } else if (gameState == GameState.finished) {
               // route to scoreboard
               const url = new URL(window.location);
@@ -130,8 +233,15 @@ function Game() {
       }
     }, game.settings.roundDurationSeconds * 1000);
 
+    setTimeout(() => {}, Math.round(game.startTimestamp / 1000));
+
+    const timeRemainingForDayIntervalId = setInterval(() => {
+      setTimeRemainingForDay((oldTime) => Math.max(0, oldTime - 1));
+    }, 1000);
+
     return () => {
       clearInterval(updateIntervalId);
+      clearInterval(timeRemainingForDayIntervalId);
       abortController?.abort();
     };
   }, []);
@@ -148,15 +258,24 @@ function Game() {
           selectedSymbol={selectedSymbol}
           symbols={symbols}
           setSymbol={setSelectedSymbol}
-          data={stockData}
+          data={stockData.map((obj) => {
+            return {
+              id: obj[selectedSymbol].id,
+              price: obj[selectedSymbol].price,
+              volume: obj[selectedSymbol].volume,
+            };
+          })}
         />
       </div>
       <div className="panel account">
         <Account
           money={localPlayer.money}
           holdings={localPlayer.stocks}
+          selectedSymbol={selectedSymbol}
           setSymbol={setSelectedSymbol}
           latestStockData={stockData[stockData.length - 1]}
+          handleBuy={handleBuy}
+          handleSell={handleSell}
         />
       </div>
       <div className="panel">
@@ -174,17 +293,9 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
     data: PropTypes.arrayOf(PropTypes.object).isRequired,
   };
 
-  const [domain, setDomain] = React.useState({ x: [0, 20] });
-  const [graphDimensions, setGraphDimensions] = React.useState(null);
+  const [domain, setDomain] = useState({ x: [0, 20] });
+  const [graphDimensions, setGraphDimensions] = useState(null);
   const graphRef = useRef(null);
-
-  const symbolData = data.map((obj) => {
-    return {
-      id: obj[selectedSymbol].id,
-      price: obj[selectedSymbol].price,
-      volume: obj[selectedSymbol].volume,
-    };
-  });
 
   // https://stackoverflow.com/a/68609331/21266350
   useEffect(() => {
@@ -203,14 +314,14 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []); // Empty array ensures that effect is only run on mount
 
-  const { maxPrice, minPrice } = symbolData.reduce(
+  const { maxPrice, minPrice } = data.reduce(
     ({ maxPrice, minPrice }, obj) => ({
       maxPrice: obj.price > maxPrice ? obj.price : maxPrice,
       minPrice: obj.price < minPrice ? obj.price : minPrice,
     }),
     {
-      maxPrice: symbolData[0]?.price || null,
-      minPrice: symbolData[0]?.price || null,
+      maxPrice: data[0]?.price || null,
+      minPrice: data[0]?.price || null,
     }
   );
 
@@ -221,8 +332,8 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
       if (currentDomain.x[0] + delta < 0) {
         delta = -currentDomain.x[0];
       }
-      if (currentDomain.x[1] + delta > symbolData.length) {
-        delta = symbolData.length - currentDomain.x[1] + 2;
+      if (currentDomain.x[1] + delta > data.length) {
+        delta = data.length - currentDomain.x[1] + 2;
       }
 
       return {
@@ -255,7 +366,7 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
           }
         >
           <VictoryLine
-            data={symbolData}
+            data={data}
             x="id"
             y="price"
             // TODO: fix scuffed animation
@@ -263,7 +374,7 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
             //   onEnter: {
             //     duration: 500,
             //     before: () => ({
-            //       _y: symbolData[symbolData.length - 2].price || 0,
+            //       _y: data[data.length - 2].price || 0,
             //     }),
             //   },
             // }}
@@ -309,19 +420,30 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
   );
 }
 
-function Account({ money, holdings, setSymbol, latestStockData }) {
+function Account({
+  money,
+  holdings,
+  selectedSymbol,
+  setSymbol,
+  latestStockData,
+  handleBuy,
+  handleSell,
+}) {
   Account.propTypes = {
     money: PropTypes.number.isRequired,
-    holdings: PropTypes.objectOf(PropTypes.object).isRequired,
+    holdings: PropTypes.object.isRequired,
+    selectedSymbol: PropTypes.string.isRequired,
     setSymbol: PropTypes.func.isRequired,
     latestStockData: PropTypes.object.isRequired,
+    handleBuy: PropTypes.func.isRequired,
+    handleSell: PropTypes.func.isRequired,
   };
 
   return (
     <React.Fragment>
       <div className="title">
         <h1>Account</h1>
-        <h1>${money}</h1>
+        <h1>${money.toFixed(2)}</h1>
       </div>
       <Holdings
         holdings={holdings}
@@ -329,10 +451,12 @@ function Account({ money, holdings, setSymbol, latestStockData }) {
         latestStockData={latestStockData}
       />
       <Trade
-        symbol={'SMBL'}
-        moneyAvailable={1000}
-        quantityAvailable={10}
-        price={30}
+        symbol={selectedSymbol}
+        moneyAvailable={money}
+        quantityAvailable={holdings[selectedSymbol] || 0}
+        price={latestStockData[selectedSymbol]?.price || 0}
+        handleBuy={handleBuy}
+        handleSell={handleSell}
       />
     </React.Fragment>
   );
@@ -340,7 +464,7 @@ function Account({ money, holdings, setSymbol, latestStockData }) {
 
 function Holdings({ holdings, setSymbol, latestStockData }) {
   Holdings.propTypes = {
-    holdings: PropTypes.objectOf(PropTypes.object).isRequired,
+    holdings: PropTypes.object.isRequired,
     setSymbol: PropTypes.func.isRequired,
     latestStockData: PropTypes.object.isRequired,
   };
@@ -355,8 +479,8 @@ function Holdings({ holdings, setSymbol, latestStockData }) {
           <Asset
             key={symbol}
             symbol={symbol}
-            quantity={holdings[symbol].quantity}
-            value={holdings[symbol].quantity * latestStockData[symbol].price}
+            quantity={holdings[symbol]}
+            value={holdings[symbol] * latestStockData[symbol].price}
             setSymbol={setSymbol}
           />
         ))}
@@ -381,24 +505,35 @@ function Asset({ symbol, quantity, value, setSymbol }) {
       <p className="symbol" onClick={() => setSymbol(symbol)}>
         {symbol}
       </p>
-      <p className="quantity">{quantity}</p>
-      <p className="value">${value}</p>
+      <p className="quantity">{quantity.toFixed(2)}</p>
+      <p className="value">${value.toFixed(2)}</p>
     </React.Fragment>
   );
 }
 
-function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
+function Trade({
+  symbol,
+  moneyAvailable,
+  quantityAvailable,
+  price,
+  handleBuy,
+  handleSell,
+}) {
   Trade.propTypes = {
     symbol: PropTypes.string.isRequired,
     moneyAvailable: PropTypes.number.isRequired,
     quantityAvailable: PropTypes.number.isRequired,
     price: PropTypes.number.isRequired,
+    handleBuy: PropTypes.func.isRequired,
+    handleSell: PropTypes.func.isRequired,
   };
 
   // TODO: combine quantity and total into one state
-  const [quantity, setQuantity] = React.useState(0);
-  const [estimatedTotal, setEstimatedTotal] = React.useState(0);
-  const [showBuy, setShowBuy] = React.useState(true);
+  const [quantity, setQuantity] = useState(0);
+  const [estimatedTotal, setEstimatedTotal] = useState(0);
+  const [showBuy, setShowBuy] = useState(true);
+  const [loadingBuy, setLoadingBuy] = useState(false);
+  const [loadingSell, setLoadingSell] = useState(false);
 
   const maxQuantity = showBuy
     ? Math.round((100 * moneyAvailable) / price) / 100
@@ -447,14 +582,14 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
         value={quantity}
         setValue={(val) => {
           setQuantity(val);
-          setEstimatedTotal(Math.round(val * price * 100) / 100);
+          setEstimatedTotal(Math.ceil(val * price * 100) / 100);
         }}
         suffix={() => (
           <p
             className="max-button"
             onClick={() => {
               setQuantity(maxQuantity);
-              setEstimatedTotal(Math.round(maxQuantity * price * 100) / 100);
+              setEstimatedTotal(Math.ceil(maxQuantity * price * 100) / 100);
             }}
           >
             Max
@@ -470,7 +605,7 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
         value={estimatedTotal}
         setValue={(val) => {
           const initialQuantity = val / price;
-          const roundedQuantity = Math.round(initialQuantity * 100) / 100;
+          const roundedQuantity = Math.floor(initialQuantity * 100) / 100;
           setEstimatedTotal(val);
           setQuantity(roundedQuantity);
         }}
@@ -478,7 +613,7 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
           <p
             className="max-button"
             onClick={() => {
-              setQuantity(Math.round(maxTotal * 100) / 100);
+              setQuantity(Math.floor(maxTotal * 100) / 100);
               setEstimatedTotal(maxTotal);
             }}
           >
@@ -495,14 +630,34 @@ function Trade({ symbol, moneyAvailable, quantityAvailable, price }) {
         step={0.01}
         onChange={(val) => {
           setQuantity(val);
-          setEstimatedTotal(Math.round(val * price * 100) / 100);
+          setEstimatedTotal(Math.ceil(val * price * 100) / 100);
         }}
       />
       <div className="space-around-flex">
         {showBuy ? (
-          <button className="buy">Buy</button>
+          <button
+            className="buy"
+            onClick={async () => {
+              setLoadingBuy(true);
+              await handleBuy(symbol, quantity);
+              setLoadingBuy(false);
+            }}
+            disabled={quantity === 0 || loadingBuy}
+          >
+            Buy
+          </button>
         ) : (
-          <button className="sell">Sell</button>
+          <button
+            className="sell"
+            onClick={async () => {
+              setLoadingSell(true);
+              await handleSell(symbol, quantity);
+              setLoadingSell(false);
+            }}
+            disabled={quantity === 0 || loadingSell}
+          >
+            Sell
+          </button>
         )}
       </div>
     </div>
@@ -515,10 +670,13 @@ function Players({ localPlayer, players }) {
     players: PropTypes.arrayOf(PropTypes.object).isRequired,
   };
 
-  const [showStartFade, setShowStartFade] = React.useState(false);
-  const [showEndFade, setShowEndFade] = React.useState(true);
+  const [showStartFade, setShowStartFade] = useState(false);
+  const [showEndFade, setShowEndFade] = useState(true);
 
   const aiIndex = players.findIndex((player) => player.id === 'ai');
+  const localPlayerIndex = players.findIndex(
+    (player) => player.id === localPlayer.id
+  );
 
   return (
     <div className="players-parent">
@@ -537,16 +695,16 @@ function Players({ localPlayer, players }) {
         }}
       >
         <Player
-          key={localPlayer.id}
-          playerName={localPlayer.name}
-          playerMoney={localPlayer.money}
-          prevPlayerMoney={localPlayer.money}
+          key={players[localPlayerIndex].id}
+          playerName={players[localPlayerIndex].name}
+          playerMoney={players[localPlayerIndex].netWorth}
+          prevPlayerMoney={players[localPlayerIndex].previousNetWorth}
         />
         <Player
           key={players[aiIndex].id}
           playerName={players[aiIndex].name}
           playerMoney={players[aiIndex].netWorth}
-          prevPlayerMoney={players[aiIndex].netWorth}
+          prevPlayerMoney={players[aiIndex].previousNetWorth}
         />
         {
           // TODO: cache to avoid redundant computation
@@ -560,7 +718,7 @@ function Players({ localPlayer, players }) {
                 key={player.id}
                 playerName={player.name}
                 playerMoney={player.netWorth}
-                prevPlayerMoney={player.netWorth}
+                prevPlayerMoney={player.previousNetWorth}
               />
             ))
         }
@@ -593,7 +751,7 @@ function Player({ playerName, playerMoney, prevPlayerMoney }) {
         ) : (
           <ArrowDownLine color="red" style={{ fontSize: '22px' }} />
         )}
-        ${playerMoney}
+        ${playerMoney?.toFixed(2)}
       </span>
     </div>
   );

@@ -56,6 +56,7 @@ function Lobby() {
                   game: {
                     ...game,
                     hostId: data.hostId,
+                    startTimestamp: data.startTimestamp,
                   },
                   players: data.players,
                   localPlayer,
@@ -225,6 +226,7 @@ function Lobby() {
           return {
             ...previousGame,
             hostId: data.hostId,
+            startTimestamp: data.startTimestamp,
           };
         });
         if (gameState == GameState.active) {
@@ -233,6 +235,7 @@ function Lobby() {
               game: {
                 ...game,
                 hostId: data.hostId,
+                startTimestamp: data.startTimestamp,
               },
               players: data.players,
               localPlayer,
