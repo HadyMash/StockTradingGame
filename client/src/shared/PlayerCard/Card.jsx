@@ -7,7 +7,7 @@ function Card({ player }) {
             <div className="card">
                 <div className='card-header'>
                     <div className='circle'></div>
-                    <div className='player-name'>{player.name}</div>
+                    <div className='player-name-scoreboard'>{player.name}</div>
                 </div>
                 <hr style={{ "width": '90%' }} />
                 {player.stocks.map((stock, index) => {

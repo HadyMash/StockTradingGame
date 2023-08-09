@@ -752,7 +752,7 @@ button.lobby-leave {
   display: flex;
   justify-content: center;
 }
-.player-name {
+.player-name-scoreboard {
   font-size: xx-large;
   font-weight: 500;
   margin: 10px 0;
@@ -813,4 +813,29 @@ button.lobby-leave {
 
 .stock-price {
   text-align: right;
+}
+
+.lobby-name-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.game-code-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  color: #727272;
+}
+.copy-icon:hover {
+  transform: scale(1.1);
+  transition: ease 0.05s;
+}
+
+.lobby-name-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-end;
 }
