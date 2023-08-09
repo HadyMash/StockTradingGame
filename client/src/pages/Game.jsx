@@ -11,6 +11,7 @@ import {
   VictoryZoomContainer,
 } from 'victory';
 import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import TextInput from '../shared/TextInput';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import { Minus, ArrowDownLine, ArrowUpLine } from '@rsuite/icons';
