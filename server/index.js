@@ -765,9 +765,9 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
 
       if (endGame) {
         // TODO: end game response
-        const response = await db.endGame(gameId);
-        if (response.statusCode !== 200) {
-          throw new Error(response.resourceBody);
+        const endGameResponse = await db.endGame(gameId);
+        if (endGameResponse.statusCode !== 200) {
+          throw new Error(endGameResponse.resourceBody);
         }
         // TODO: check if ai won
 
