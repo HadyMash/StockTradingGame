@@ -132,11 +132,10 @@ app.post('/create-new-game', async (req, res) => {
 
       const assetsOverTime = [{}];
       const moneyOverTime = [gameSettings.startingMoney];
-      const marketData = {};
+      const marketData = [];
 
       for (let i = 0; i < symbols.length; i++) {
         const symbol = symbols[i];
-        marketData[symbol] = [];
         // console.log('starting', symbol);
 
         const rawEntries = await db.getMarketDataEntries(
@@ -144,63 +143,86 @@ app.post('/create-new-game', async (req, res) => {
           stockStartIds[symbol],
           gameSettings.maxGameTurns + 20
         );
-        rawEntries.forEach((element) => {
-          marketData[symbol].push(element.resourceBody);
-        });
+        for (let i = 0; i < rawEntries.length; i++) {
+          if (!marketData[i]) {
+            marketData[i] = {};
+          }
 
-        // TODO: adjust to allow ai to run from j = 0
-        for (let j = 1; j < maxGameTurns; j++) {
-          if (!assetsOverTime[j]) {
-            assetsOverTime[j] = {};
-          }
-          if (!moneyOverTime[j]) {
-            moneyOverTime[j] = moneyOverTime[j - 1];
-          }
-          let aiPrediction = makeDecision(marketData[symbol].slice(0, j + 1));
-          // console.log(`${j}:`, aiPrediction);
-          if (aiPrediction.decision === AIDecision.BUY) {
-            // * Buy
-            // console.log('buying');
-            if (!assetsOverTime[j - 1][symbol]) {
-              // console.log('set current to 0 at index:', j);
-              assetsOverTime[j][symbol] = 0;
-            } else {
-              assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
-            }
-            if (
-              aiPrediction.quantity * marketData[symbol][j].price >
-              moneyOverTime[j]
-            ) {
-              aiPrediction.quantity =
-                Math.floor((100 * money) / marketData[symbol][j].price) / 100;
-            }
-            assetsOverTime[j][symbol] += aiPrediction.quantity;
-            moneyOverTime[j] -=
-              marketData[symbol][j].price * aiPrediction.quantity;
-          } else if (aiPrediction.decision === AIDecision.SELL) {
-            // * Sell
-            // console.log('selling');
-            if (assetsOverTime[j - 1][symbol]) {
-              assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
-              if (assetsOverTime[j][symbol] < aiPrediction.quantity) {
-                aiPrediction.quantity = assetsOverTime[j][symbol] ?? 0;
-              }
-              assetsOverTime[j][symbol] -= aiPrediction.quantity;
-              moneyOverTime[j] +=
-                marketData[symbol][j].price * aiPrediction.quantity;
-            }
+          marketData[i][symbol] = rawEntries[i].resourceBody;
+        }
+      }
+
+      const priceLists = [];
+
+      // Loop through each data entry
+      for (const entry of marketData) {
+        // Initialize a list to store prices for this entry
+        const entryPrices = [];
+
+        // Loop through each symbol's data in the entry
+        for (const symbolData of Object.values(entry)) {
+          // Extract the price and push it to the entryPrices list
+          entryPrices.push(symbolData.price);
+        }
+
+        // Push the entryPrices list to the priceLists list
+        priceLists.push(entryPrices);
+      }
+
+      console.log(priceLists);
+
+      // TODO: adjust to allow ai to run from j = 0
+      for (let j = 1; j < maxGameTurns; j++) {
+        if (!assetsOverTime[j]) {
+          assetsOverTime[j] = {};
+        }
+        if (!moneyOverTime[j]) {
+          moneyOverTime[j] = moneyOverTime[j - 1];
+        }
+        let aiPrediction = makeDecision(priceLists[j], moneyOverTime[j]);
+        // console.log(`${j}:`, aiPrediction);
+        if (aiPrediction.decision === AIDecision.BUY) {
+          // * Buy
+          // console.log('buying');
+          if (!assetsOverTime[j - 1][symbol]) {
+            // console.log('set current to 0 at index:', j);
+            assetsOverTime[j][symbol] = 0;
           } else {
-            // * Hold
-            // console.log('holding');
-            // console.log(assetsOverTime[j - 1]);
-            if (assetsOverTime[j - 1][symbol]) {
-              assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol] ?? 0;
+            assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
+          }
+          if (
+            aiPrediction.quantity * marketData[symbol][j].price >
+            moneyOverTime[j]
+          ) {
+            aiPrediction.quantity =
+              Math.floor((100 * money) / marketData[symbol][j].price) / 100;
+          }
+          assetsOverTime[j][symbol] += aiPrediction.quantity;
+          moneyOverTime[j] -=
+            marketData[symbol][j].price * aiPrediction.quantity;
+        } else if (aiPrediction.decision === AIDecision.SELL) {
+          // * Sell
+          // console.log('selling');
+          if (assetsOverTime[j - 1][symbol]) {
+            assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
+            if (assetsOverTime[j][symbol] < aiPrediction.quantity) {
+              aiPrediction.quantity = assetsOverTime[j][symbol] ?? 0;
             }
+            assetsOverTime[j][symbol] -= aiPrediction.quantity;
+            moneyOverTime[j] +=
+              marketData[symbol][j].price * aiPrediction.quantity;
+          }
+        } else {
+          // * Hold
+          // console.log('holding');
+          // console.log(assetsOverTime[j - 1]);
+          if (assetsOverTime[j - 1][symbol]) {
+            assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol] ?? 0;
           }
         }
-        // console.log(moneyOverTime);
-        // console.log(assetsOverTime);
       }
+      // console.log(moneyOverTime);
+      // console.log(assetsOverTime);
 
       // console.log('calculating net worth');
       // console.log(assetsOverTime);
