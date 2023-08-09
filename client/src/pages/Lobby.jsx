@@ -79,7 +79,7 @@ function Lobby() {
                   stockData: data.stockData,
                 },
               });
-            } else {
+            } else if (gameState == GameState.scoreboard) {
               navigate('/scoreboard', {
                 state: {
                   gameState: data.gameState,
@@ -167,7 +167,7 @@ function Lobby() {
               stockData: data.stockData,
             },
           });
-        } else {
+        } else if (gameState == GameState.finished) {
           navigate('/scoreboard', {
             state: {
               gameState: data.gameState,

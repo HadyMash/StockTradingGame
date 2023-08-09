@@ -10,7 +10,7 @@ import {
   VictoryLine,
   VictoryZoomContainer,
 } from 'victory';
-import ToastContainer from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import TextInput from '../shared/TextInput';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import { Minus, ArrowDownLine, ArrowUpLine } from '@rsuite/icons';
@@ -219,9 +219,6 @@ function Game() {
 
               // update stock data
               setStockData(data.stockData);
-
-              // update time remaining for day
-              setTimeRemainingForDay(game.settings.roundDurationSeconds);
             } else if (gameState == GameState.finished) {
               // route to scoreboard
               const url = new URL(window.location);
@@ -249,6 +246,8 @@ function Game() {
       abortController = new AbortController();
       try {
         update(abortController);
+        // update time remaining for day
+        setTimeRemainingForDay(game.settings.roundDurationSeconds);
       } catch (error) {
         console.error(error);
         showErrorToast(error);
@@ -419,9 +418,42 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
                 stroke: 'grey',
                 strokeLinecap: 'round',
                 strokeLinejoin: 'round',
+                strokeDasharray: '10, 10',
+                strokeWidth: 0.5,
+                pointerEvents: 'painted',
+              },
+            }}
+          />
+          <VictoryAxis
+            dependentAxis
+            orientation="right"
+            axisLabelComponent={<></>}
+            tickValues={[data[data.length - 1].price || 0]}
+            tickFormat={(x) => `$${x}`}
+            style={{
+              grid: {
+                fill: 'none',
+                stroke:
+                  data[data.length - 1].price > data[data.length - 2].price
+                    ? 'green'
+                    : data[data.length - 1].price ===
+                      data[data.length - 2].price
+                    ? 'grey'
+                    : 'red',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
                 strokeDasharray: '10, 5',
                 strokeWidth: 0.5,
                 pointerEvents: 'painted',
+              },
+              tickLabels: {
+                fill:
+                  data[data.length - 1].price > data[data.length - 2].price
+                    ? 'green'
+                    : data[data.length - 1].price ===
+                      data[data.length - 2].price
+                    ? 'grey'
+                    : 'red',
               },
             }}
           />

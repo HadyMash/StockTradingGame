@@ -786,7 +786,7 @@ app.get('/update/:gameId/:playerId', async (req, res) => {
         }
 
         response = {
-          gameState: game.state,
+          gameState: GameState.finished,
           winner: winner,
           losers: Object.keys(game.players)
             .filter((id) => id !== winner.id)
