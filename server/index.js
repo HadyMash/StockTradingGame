@@ -494,6 +494,12 @@ app.post('/buy', async (req, res) => {
       });
       return;
     }
+    if (quantity < 0) {
+      res.status(400).json({
+        error: 'Quantity must be positive',
+      });
+      return;
+    }
     if (!gameId) {
       res.status(400).json({
         error: 'Missing game id',
@@ -571,6 +577,12 @@ app.post('/sell', async (req, res) => {
     if (!quantity) {
       res.status(400).json({
         error: 'Missing quantity',
+      });
+      return;
+    }
+    if (quantity < 0) {
+      res.status(400).json({
+        error: 'Quantity must be positive',
       });
       return;
     }
