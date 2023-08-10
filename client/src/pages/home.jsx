@@ -348,7 +348,7 @@ function CreateGame({
       <GameSettingSlider
         title={'Duration'}
         min={10}
-        max={20}
+        max={90}
         value={roundDuration}
         setValue={setRoundDuration}
       />

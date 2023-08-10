@@ -97,14 +97,28 @@ function startGame(socket, game) {
     activeGames[game.id].nextRoundTimestamp =
       Date.now() + activeGames[game.id].settings.roundDurationSeconds * 1000;
     activeGames[game.id].round = 0;
-    io.to(game.id).emit('game-started', {
-      players: Object.keys(activeGames[game.id].players).map((playerId) => {
+    const playersToSend = Object.keys(activeGames[game.id].players).map(
+      (playerId) => {
         return {
           id: playerId,
           name: activeGames[game.id].players[playerId].name,
           netWorth: activeGames[game.id].players[playerId].money,
         };
-      }),
+      },
+    );
+
+    if (
+      activeGames[game.id].aiNetWorthOverTime &&
+      activeGames[game.id].aiNetWorthOverTime[0]
+    ) {
+      playersToSend.push({
+        id: 'ai',
+        name: 'AI',
+        netWorth: activeGames[game.id].aiNetWorthOverTime[0],
+      });
+    }
+    io.to(game.id).emit('game-started', {
+      players: playersToSend,
       nextRoundTimestamp: activeGames[game.id].nextRoundTimestamp,
       stockData: game.stockData.slice(0, 20),
       round: activeGames[game.id].round,
@@ -190,6 +204,18 @@ function startGame(socket, game) {
             };
           },
         );
+        if (
+          activeGames[game.id].aiNetWorthOverTime[activeGames[game.id].round]
+        ) {
+          newPlayers.push({
+            id: 'ai',
+            name: 'AI',
+            netWorth:
+              activeGames[game.id].aiNetWorthOverTime[
+                activeGames[game.id].round
+              ],
+          });
+        }
         console.log('new players', newPlayers);
 
         if (!endGame) {
@@ -304,7 +330,15 @@ function buy(socket, game, data) {
   }
 
   if (price * quantity > activeGames[game.id].players[socket.id].money) {
-    console.warn('insufficient funds');
+    console.warn(
+      'insufficient funds',
+      'price',
+      price,
+      'quantity',
+      quantity,
+      'money',
+      activeGames[game.id].players[socket.id].money,
+    );
     socket.emit('error-message', 'insufficient funds');
     return;
   }

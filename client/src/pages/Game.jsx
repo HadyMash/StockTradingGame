@@ -697,12 +697,14 @@ function Players({ localPlayer, players }) {
           playerMoney={players[localPlayerIndex].netWorth}
           prevPlayerMoney={players[localPlayerIndex].previousNetWorth}
         />
-        {/*<Player*/}
-        {/*    key={players[aiIndex].id}*/}
-        {/*    playerName={players[aiIndex].name}*/}
-        {/*    playerMoney={players[aiIndex].netWorth}*/}
-        {/*    prevPlayerMoney={players[aiIndex].previousNetWorth}*/}
-        {/*/>*/}
+        {aiIndex && aiIndex > -1 && (
+          <Player
+            key={players[aiIndex].id}
+            playerName={players[aiIndex].name}
+            playerMoney={players[aiIndex].netWorth}
+            prevPlayerMoney={players[aiIndex].previousNetWorth}
+          />
+        )}
         {players
           .filter(
             (player) => player.id !== localPlayer.id && player.id !== 'ai',
