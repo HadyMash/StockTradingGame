@@ -359,6 +359,7 @@ io.on('connection', async (socket) => {
           const now = Date.now();
           const delay = activeGames[game.id].nextRoundTimestamp - now;
 
+          // TODO: don't timeout if game ended
           setTimeout(() => {
             gameUpdate();
           }, delay);
