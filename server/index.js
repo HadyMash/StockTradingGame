@@ -241,6 +241,14 @@ io.on('connection', async (socket) => {
           return;
         }
 
+        console.log(
+          symbol,
+          price,
+          quantity,
+          activeGames[game.id].players[socket.id].money,
+        );
+        console.log(activeGames[game.id].stockData[round]);
+
         // update money and stocks
         activeGames[game.id].players[socket.id].money -= price * quantity;
         if (!activeGames[game.id].players[socket.id].stocks[symbol]) {
@@ -347,6 +355,7 @@ io.on('connection', async (socket) => {
               ) {
                 console.log('game over by max rounds');
                 endGame = true;
+                activeGames[game.id].round--;
               }
               let winner;
               console.log('getting new players');
