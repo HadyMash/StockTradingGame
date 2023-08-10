@@ -179,6 +179,7 @@ io.on('connection', async (socket) => {
         if (activeGames[game.id]) {
           delete activeGames[game.id].players[socket.id];
           if (Object.keys(activeGames[game.id].players).length === 0) {
+            console.log('no players left in game, deleting game');
             delete activeGames[game.id];
           } else {
             io.to(game.id).emit('remove-player', socket.id);
@@ -292,7 +293,15 @@ io.on('connection', async (socket) => {
 
         io.to(socket.id).emit('update-player', {
           money: activeGames[game.id].players[socket.id].money,
-          stocks: activeGames[game.id].players[socket.id].stocks,
+          stocks: Object.keys(activeGames[game.id].players[socket.id].stocks)
+            .filter(
+              (symbol) =>
+                activeGames[game.id].players[socket.id].stocks[symbol] > 0,
+            )
+            .map(
+              (symbol) =>
+                activeGames[game.id].players[socket.id].stocks[symbol],
+            ),
         });
       });
 
@@ -322,127 +331,142 @@ io.on('connection', async (socket) => {
           });
 
           function gameUpdate() {
-            activeGames[game.id].round++;
-            console.log('round', activeGames[game.id].round);
-            const newStockData =
-              activeGames[game.id].stockData[activeGames[game.id].round + 20];
-            console.log('new stock data', newStockData);
-            let endGame = false;
-            if (
-              activeGames[game.id].round >=
-              activeGames[game.id].settings.maxGameTurns
-            ) {
-              console.log('game over by max rounds');
-              endGame = true;
-            }
-            let winner;
-            console.log('getting new players');
-            const newPlayers = Object.keys(activeGames[game.id].players).map(
-              (playerId) => {
-                const player = activeGames[game.id].players[playerId];
-                let netWorth = player.money;
-                for (let i = 0; i < Object.keys(player.stocks); i++) {
-                  const symbol = Object.keys(player.stocks)[i];
-                  const quantity = player.stocks[symbol];
-                  netWorth += quantity * newStockData[symbol].price;
-                }
-
-                if (!winner) {
-                  winner = {
-                    id: playerId,
-                    name: player.name,
-                    netWorth: netWorth,
-                    stocks: player.stocks,
-                  };
-                }
-
-                if (netWorth > winner.netWorth) {
-                  winner = {
-                    id: playerId,
-                    name: player.name,
-                    netWorth: netWorth,
-                    stocks: player.stocks,
-                  };
-                }
-
-                if (netWorth >= activeGames[game.id].settings.targetMoney) {
+            try {
+              activeGames[game.id].round++;
+              console.log('round', activeGames[game.id].round);
+              const newStockData =
+                activeGames[game.id].stockData[activeGames[game.id].round + 20];
+              console.log('new stock data', newStockData);
+              let endGame = false;
+              if (
+                activeGames[game.id].round >=
+                activeGames[game.id].settings.maxGameTurns
+              ) {
+                console.log('game over by max rounds');
+                endGame = true;
+              }
+              let winner;
+              console.log('getting new players');
+              const newPlayers = Object.keys(activeGames[game.id].players).map(
+                (playerId) => {
+                  const player = activeGames[game.id].players[playerId];
                   console.log(
-                    'game over by target money',
-                    'player',
+                    'calculating net worth',
                     player.name,
-                    'net worth',
-                    netWorth,
-                    'target money',
-                    activeGames[game.id].settings.targetMoney,
+                    player.stocks,
                   );
-                  endGame = true;
-                }
+                  let netWorth = player.money;
+                  console.log('net worth', netWorth);
+                  for (let i = 0; i < Object.keys(player.stocks).length; i++) {
+                    const symbol = Object.keys(player.stocks)[i];
+                    console.log('symbol', symbol);
+                    const quantity = player.stocks[symbol];
+                    console.log('new stock data', newStockData);
+                    console.log(newStockData[symbol]);
+                    netWorth += quantity * newStockData[symbol].price;
+                    console.log('net worth', netWorth);
+                  }
+                  console.log('net worth', netWorth);
 
-                console.log('players map function', {
-                  id: playerId,
-                  name: player.name,
-                  netWorth: netWorth,
+                  if (!winner) {
+                    winner = {
+                      id: playerId,
+                      name: player.name,
+                      netWorth: netWorth,
+                      stocks: player.stocks,
+                    };
+                  }
+
+                  if (netWorth > winner.netWorth) {
+                    winner = {
+                      id: playerId,
+                      name: player.name,
+                      netWorth: netWorth,
+                      stocks: player.stocks,
+                    };
+                  }
+
+                  if (netWorth >= activeGames[game.id].settings.targetMoney) {
+                    console.log(
+                      'game over by target money',
+                      'player',
+                      player.name,
+                      'net worth',
+                      netWorth,
+                      'target money',
+                      activeGames[game.id].settings.targetMoney,
+                    );
+                    endGame = true;
+                  }
+
+                  console.log('players map function', {
+                    id: playerId,
+                    name: player.name,
+                    netWorth: netWorth,
+                  });
+
+                  return {
+                    id: playerId,
+                    name: player.name,
+                    netWorth: netWorth,
+                  };
+                },
+              );
+              console.log('new players', newPlayers);
+
+              if (!endGame) {
+                console.log('game not over');
+                activeGames[game.id].nextRoundTimestamp =
+                  Date.now() +
+                  activeGames[game.id].settings.roundDurationSeconds * 1000;
+                io.to(game.id).emit('game-update', {
+                  nextRoundTimestamp: activeGames[game.id].nextRoundTimestamp,
+                  players: newPlayers,
+                  newStockData: newStockData,
                 });
 
-                return {
-                  id: playerId,
-                  name: player.name,
-                  netWorth: netWorth,
-                };
-              },
-            );
-            console.log('new players', newPlayers);
+                console.log('starting timeout till next round');
+                setTimeout(() => {
+                  gameUpdate();
+                }, activeGames[game.id].nextRoundTimestamp - Date.now());
+              } else {
+                console.log('game over');
 
-            if (!endGame) {
-              console.log('game not over');
-              activeGames[game.id].nextRoundTimestamp =
-                Date.now() +
-                activeGames[game.id].settings.roundDurationSeconds * 1000;
-              io.to(game.id).emit('game-update', {
-                nextRoundTimestamp: activeGames[game.id].nextRoundTimestamp,
-                players: newPlayers,
-                newStockData: newStockData,
-              });
+                const tempGame = activeGames[game.id];
 
-              console.log('starting timeout till next round');
-              setTimeout(() => {
-                gameUpdate();
-              }, activeGames[game.id].nextRoundTimestamp - Date.now());
-            } else {
-              console.log('game over');
-
-              const tempGame = activeGames[game.id];
-
-              console.log('winner', winner);
-              console.log(
-                'losers',
-                Object.keys(tempGame.players)
-                  .filter((playerId) => playerId !== winner.id)
-                  .map((playerId) => {
-                    const player = tempGame.players[playerId];
-                    return {
-                      id: playerId,
-                      name: player.name,
-                      netWorth: player.money,
-                      stocks: player.stocks,
-                    };
-                  }),
-              );
-              activeGames[game.id].state = GameState.finished;
-              io.to(game.id).emit('game-over', {
-                winner: winner,
-                losers: Object.keys(tempGame.players)
-                  .filter((playerId) => playerId !== winner.id)
-                  .map((playerId) => {
-                    const player = tempGame.players[playerId];
-                    return {
-                      id: playerId,
-                      name: player.name,
-                      netWorth: player.money,
-                      stocks: player.stocks,
-                    };
-                  }),
-              });
+                console.log('winner', winner);
+                console.log(
+                  'losers',
+                  Object.keys(tempGame.players)
+                    .filter((playerId) => playerId !== winner.id)
+                    .map((playerId) => {
+                      const player = tempGame.players[playerId];
+                      return {
+                        id: playerId,
+                        name: player.name,
+                        netWorth: player.money,
+                        stocks: player.stocks,
+                      };
+                    }),
+                );
+                activeGames[game.id].state = GameState.finished;
+                io.to(game.id).emit('game-over', {
+                  winner: winner,
+                  losers: Object.keys(tempGame.players)
+                    .filter((playerId) => playerId !== winner.id)
+                    .map((playerId) => {
+                      const player = tempGame.players[playerId];
+                      return {
+                        id: playerId,
+                        name: player.name,
+                        netWorth: player.money,
+                        stocks: player.stocks,
+                      };
+                    }),
+                });
+              }
+            } catch (error) {
+              console.log(error);
             }
           }
 
@@ -450,7 +474,6 @@ io.on('connection', async (socket) => {
           const now = Date.now();
           const delay = activeGames[game.id].nextRoundTimestamp - now;
 
-          // TODO: don't timeout if game ended
           setTimeout(() => {
             gameUpdate();
           }, delay);

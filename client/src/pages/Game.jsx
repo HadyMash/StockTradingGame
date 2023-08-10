@@ -274,7 +274,9 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
           <VictoryAxis
             dependentAxis
             orientation="right"
-            tickFormat={(x) => `$${x}`}
+            tickFormat={(x) =>
+              `$${x.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+            }
             style={{
               grid: {
                 fill: 'none',
@@ -364,7 +366,13 @@ function Account({
     <React.Fragment>
       <div className="title">
         <h1>Account</h1>
-        <h1>${money.toFixed(2)}</h1>
+        <h1>
+          $
+          {money.toLocaleString(undefined, {
+            maximumFractionDigits: 2,
+            minimumFractionDigits: 2,
+          })}
+        </h1>
       </div>
       <Holdings
         holdings={holdings}
@@ -451,14 +459,23 @@ function Asset({ symbol, quantity, value, previousValue, setSymbol }) {
       <p className="symbol" onClick={() => setSymbol(symbol)}>
         {symbol}
       </p>
-      <p className="quantity">{quantity.toFixed(2)}</p>
+      <p className="quantity">
+        {quantity.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        })}
+      </p>
       <p
         className="value"
         style={{
           color: color,
         }}
       >
-        ${value.toLocaleString()}
+        $
+        {value.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        })}
       </p>
     </React.Fragment>
   );
@@ -713,7 +730,11 @@ function Player({ playerName, playerMoney, prevPlayerMoney }) {
         ) : (
           <ArrowDownLine color="red" style={{ fontSize: '22px' }} />
         )}
-        ${playerMoney?.toFixed(2)}
+        $
+        {playerMoney?.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        })}
       </span>
     </div>
   );
