@@ -124,6 +124,7 @@ function Game() {
       // update next round nextRoundTimestamp
       setNextRoundTimestamp(data.nextRoundTimestamp);
       setCountdown(Math.round((data.nextRoundTimestamp - Date.now()) / 1000));
+      setRound(data.round);
     });
 
     socket.on('game-over', (data) => {
