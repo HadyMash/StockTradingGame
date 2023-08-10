@@ -614,6 +614,28 @@ input[type='range']:focus::-ms-fill-upper {
   font-size: 28px;
 }
 
+.chart .round-info {
+  position: absolute;
+  top: 25px;
+  right: 70px;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: var(--border-radius);
+  padding: 10px;
+}
+
+.chart .round-info * {
+  text-align: right;
+  margin: 0;
+}
+
+.chart .round-info h2 {
+  margin-bottom: 5px;
+}
+
+.chart .round-info h3 {
+  font-size: 1.3em;
+}
+
 .chart .graph {
   position: absolute;
   top: 0;

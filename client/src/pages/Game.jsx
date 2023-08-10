@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { Dropdown, Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import {
@@ -10,12 +11,10 @@ import {
   VictoryLine,
   VictoryZoomContainer,
 } from 'victory';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { socket } from '../socket';
 import TextInput from '../shared/TextInput';
 import PlayerAvatar from '../shared/PlayerAvatar';
-import { Minus, ArrowDownLine, ArrowUpLine } from '@rsuite/icons';
-import { GameState } from '../../../game.mjs';
+import { ArrowDownLine, ArrowUpLine, Minus } from '@rsuite/icons';
 
 function Game() {
   const location = useLocation();
@@ -27,16 +26,34 @@ function Game() {
         ...p,
         previousNetWorth: p.netWorth,
       };
-    })
+    }),
   );
   const [localPlayer, setLocalPlayer] = useState(location.state.localPlayer);
   const [stockData, setStockData] = useState(location.state.stockData);
   const symbols = Object.keys(location.state.stockData[0]);
   const [selectedSymbol, setSelectedSymbol] = useState(symbols[0]);
-  const [timeRemainingForDay, setTimeRemainingForDay] = useState(
-    game.settings.roundDurationSeconds -
-      (Date.now() - game.startTimestamp) / 1000
+  const [nextRoundTimestamp, setNextRoundTimestamp] = useState(
+    location.state.nextRoundTimestamp,
   );
+  const [countdown, setCountdown] = useState(
+    location.state.game.settings.roundDurationSeconds,
+  );
+  const [round, setRound] = useState(location.state.round + 1);
+
+  useEffect(() => {
+    const countdownIntervalId = setInterval(() => {
+      setCountdown((previousCountdown) => {
+        return Math.max(
+          0,
+          Math.round((nextRoundTimestamp - Date.now()) / 1000),
+        );
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(countdownIntervalId);
+    };
+  }, [nextRoundTimestamp]);
 
   function showErrorToast(message) {
     toast.error(message, {
@@ -51,61 +68,13 @@ function Game() {
     });
   }
 
-  useEffect(() => {
-    console.log(location.state);
-  }, []);
-
   async function handleBuy(symbol, quantity) {
-    const response = await fetch('http://localhost:3000/buy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        gameId: game.id,
-        playerId: localPlayer.id,
-        symbol,
-        quantity,
-      }),
-    }).catch((err) => {
-      console.error(err);
-      showErrorToast(err);
-    });
-
     try {
-      if (response) {
-        const data = await response.json();
-        console.log('handle buy data', data);
-        if (response.status === 200) {
-          const gameState = data.gameState;
-          if (!gameState) {
-            throw new Error('gameState not found');
-          }
-
-          if (gameState == GameState.waiting) {
-            console.log('game not yet started inside game.jsx');
-            showErrorToast("game hasn't started yet");
-            navigate('/');
-          } else if (gameState == GameState.active) {
-            // update localPlayer
-            setLocalPlayer(data.player);
-          } else if (gameState == GameState.finished) {
-            // route to scoreboard
-            const url = new URL(window.location);
-            url.searchParams.delete('code');
-            window.history.replaceState({}, '', url);
-            navigate('/scoreboard', {
-              state: {
-                gameState: data.gameState,
-                winner: data.winner,
-                losers: data.losers,
-              },
-            });
-          }
-        } else {
-          console.log('error:', response.status, data);
-        }
-      }
+      console.log('buy');
+      socket.emit('buy', {
+        symbol: symbol,
+        quantity: quantity,
+      });
     } catch (error) {
       console.error(error);
       showErrorToast(error);
@@ -113,56 +82,12 @@ function Game() {
   }
 
   async function handleSell(symbol, quantity) {
-    const response = await fetch('http://localhost:3000/sell', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        gameId: game.id,
-        playerId: localPlayer.id,
-        symbol,
-        quantity,
-      }),
-    }).catch((err) => {
-      console.error(err);
-      showErrorToast(err);
-    });
-
     try {
-      if (response) {
-        const data = await response.json();
-        console.log('handle buy data', data);
-        if (response.status === 200) {
-          const gameState = data.gameState;
-          if (!gameState) {
-            throw new Error('gameState not found');
-          }
-
-          if (gameState == GameState.waiting) {
-            console.log('game not yet started inside game.jsx');
-            showErrorToast("game hasn't started yet");
-            navigate('/');
-          } else if (gameState == GameState.active) {
-            // update localPlayer
-            setLocalPlayer(data.player);
-          } else if (gameState == GameState.finished) {
-            // route to scoreboard
-            const url = new URL(window.location);
-            url.searchParams.delete('code');
-            window.history.replaceState({}, '', url);
-            navigate('/scoreboard', {
-              state: {
-                gameState: data.gameState,
-                winner: data.winner,
-                losers: data.losers,
-              },
-            });
-          }
-        } else {
-          console.log('error:', response.status, data);
-        }
-      }
+      console.log('sell');
+      socket.emit('sell', {
+        symbol: symbol,
+        quantity: quantity,
+      });
     } catch (error) {
       console.error(error);
       showErrorToast(error);
@@ -170,108 +95,70 @@ function Game() {
   }
 
   useEffect(() => {
-    let abortController;
+    console.log(location.state);
 
-    async function update(abortController) {
-      const response = await fetch(
-        `http://localhost:3000/update/${game.id}/${localPlayer.id}`,
-        {
-          signal: abortController.signal,
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      ).catch((err) => {
-        console.error(err);
-        showErrorToast(err);
+    socket.on('error-message', (data) => {
+      showErrorToast(data.message);
+    });
+
+    socket.on('game-update', (data) => {
+      console.log('game update', data);
+
+      // update players
+      setPlayers((previousPlayers) => {
+        return data.players.map((player) => {
+          return {
+            ...player,
+            previousNetWorth:
+              previousPlayers.find((oldPlayer) => oldPlayer.id === player.id)
+                ?.netWorth || player.netWorth,
+          };
+        });
       });
 
-      // handle response
-      try {
-        if (response) {
-          const data = await response.json();
-          console.log('update data', data);
-          if (response.status === 200) {
-            const gameState = data.gameState;
-            if (!gameState) {
-              throw new Error('gameState not found');
-            }
+      // update stock data
+      setStockData((previousStockData) => {
+        return [...previousStockData, data.newStockData];
+      });
 
-            if (gameState == GameState.waiting) {
-              console.log('game not yet started inside game.jsx');
-              showErrorToast("game hasn't started yet");
-              navigate('/');
-            } else if (gameState == GameState.active) {
-              // update player net worths on the right
-              setPlayers((oldPlayers) => {
-                return data.players.map((player) => {
-                  return {
-                    ...player,
-                    previousNetWorth: oldPlayers.find(
-                      (oldPlayer) => oldPlayer.id === player.id
-                    ).netWorth,
-                  };
-                });
-              });
+      // update next round nextRoundTimestamp
+      setNextRoundTimestamp(data.nextRoundTimestamp);
+      setCountdown(Math.round((data.nextRoundTimestamp - Date.now()) / 1000));
+    });
 
-              // update local player
-              setLocalPlayer(data.player);
+    socket.on('game-over', (data) => {
+      const winner = data.winner;
+      const losers = data.losers;
+      console.log('winner', winner);
+      console.log('losers', losers);
 
-              // update stock data
-              setStockData(data.stockData);
-            } else if (gameState == GameState.finished) {
-              // route to scoreboard
-              const url = new URL(window.location);
-              url.searchParams.delete('code');
-              window.history.replaceState({}, '', url);
-              navigate('/scoreboard', {
-                state: {
-                  gameState: data.gameState,
-                  winner: data.winner,
-                  losers: data.losers,
-                },
-              });
-            }
-          } else {
-            console.log('error:', response.status, data);
-          }
-        }
-      } catch (err) {
-        console.error(err);
-        showErrorToast(err);
-      }
-    }
-    const updateIntervalId = setInterval(async () => {
-      abortController?.abort();
-      abortController = new AbortController();
-      try {
-        update(abortController);
-        // update time remaining for day
-        setTimeRemainingForDay(game.settings.roundDurationSeconds);
-      } catch (error) {
-        console.error(error);
-        showErrorToast(error);
-      }
-    }, game.settings.roundDurationSeconds * 1000);
+      const url = new URL(window.location);
+      url.searchParams.delete('code');
+      window.history.replaceState({}, '', url);
 
-    setTimeout(() => {}, Math.round(game.startTimestamp / 1000));
+      navigate('/scoreboard', {
+        state: {
+          winner: winner,
+          losers: losers,
+        },
+      });
+    });
 
-    const timeRemainingForDayIntervalId = setInterval(() => {
-      setTimeRemainingForDay((oldTime) => Math.max(0, oldTime - 1));
-    }, 1000);
+    socket.on('update-player', (data) => {
+      console.log('portfolio update', data);
+      setLocalPlayer((previousPlayer) => {
+        return {
+          ...previousPlayer,
+          money: data.money,
+          stocks: data.stocks,
+        };
+      });
+    });
 
     return () => {
-      clearInterval(updateIntervalId);
-      clearInterval(timeRemainingForDayIntervalId);
-      abortController?.abort();
+      socket?.off();
     };
   }, []);
-
-  // ! temp
-  useEffect(() => {
-    console.log('timeRemainingForDay:', timeRemainingForDay);
-  }, [timeRemainingForDay]);
 
   return (
     <React.Fragment>
@@ -288,6 +175,8 @@ function Game() {
                 volume: obj[selectedSymbol].volume,
               };
             })}
+            round={round}
+            countdown={countdown}
           />
         </div>
         <div className="panel account">
@@ -311,12 +200,14 @@ function Game() {
   );
 }
 
-function Chart({ selectedSymbol, symbols, setSymbol, data }) {
+function Chart({ selectedSymbol, symbols, setSymbol, data, round, countdown }) {
   Chart.propTypes = {
     selectedSymbol: PropTypes.string.isRequired,
     symbols: PropTypes.arrayOf(PropTypes.string).isRequired,
     setSymbol: PropTypes.func.isRequired,
     data: PropTypes.arrayOf(PropTypes.object).isRequired,
+    round: PropTypes.number.isRequired,
+    countdown: PropTypes.number.isRequired,
   };
 
   const [domain, setDomain] = useState({ x: [0, 20] });
@@ -332,6 +223,7 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
         height: graphRef.current.clientHeight,
       });
     }
+
     // Add event listener
     window.addEventListener('resize', handleResize);
     // Call handler right away so state gets updated with initial window size
@@ -348,7 +240,7 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
     {
       maxPrice: data[0]?.price || null,
       minPrice: data[0]?.price || null,
-    }
+    },
   );
 
   function panGraph(e) {
@@ -412,7 +304,9 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
           <VictoryAxis
             dependentAxis
             orientation="right"
-            tickFormat={(x) => `$${x}`}
+            tickFormat={(x) =>
+              `$${x.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+            }
             style={{
               grid: {
                 fill: 'none',
@@ -473,6 +367,10 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
           ))}
         </Dropdown>
       </div>
+      <div className="round-info">
+        <h2>Round {round}</h2>
+        <h3>{countdown}s</h3>
+      </div>
     </React.Fragment>
   );
 }
@@ -502,7 +400,13 @@ function Account({
     <React.Fragment>
       <div className="title">
         <h1>Account</h1>
-        <h1>${money.toFixed(2)}</h1>
+        <h1>
+          $
+          {money.toLocaleString(undefined, {
+            maximumFractionDigits: 2,
+            minimumFractionDigits: 2,
+          })}
+        </h1>
       </div>
       <Holdings
         holdings={holdings}
@@ -589,14 +493,23 @@ function Asset({ symbol, quantity, value, previousValue, setSymbol }) {
       <p className="symbol" onClick={() => setSymbol(symbol)}>
         {symbol}
       </p>
-      <p className="quantity">{quantity.toFixed(2)}</p>
+      <p className="quantity">
+        {quantity.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        })}
+      </p>
       <p
         className="value"
         style={{
           color: color,
         }}
       >
-        ${value.toLocaleString()}
+        $
+        {value.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        })}
       </p>
     </React.Fragment>
   );
@@ -759,7 +672,7 @@ function Players({ localPlayer, players }) {
 
   const aiIndex = players.findIndex((player) => player.id === 'ai');
   const localPlayerIndex = players.findIndex(
-    (player) => player.id === localPlayer.id
+    (player) => player.id === localPlayer.id,
   );
 
   return (
@@ -784,15 +697,17 @@ function Players({ localPlayer, players }) {
           playerMoney={players[localPlayerIndex].netWorth}
           prevPlayerMoney={players[localPlayerIndex].previousNetWorth}
         />
-        <Player
-          key={players[aiIndex].id}
-          playerName={players[aiIndex].name}
-          playerMoney={players[aiIndex].netWorth}
-          prevPlayerMoney={players[aiIndex].previousNetWorth}
-        />
+        {aiIndex && aiIndex > -1 && (
+          <Player
+            key={players[aiIndex].id}
+            playerName={players[aiIndex].name}
+            playerMoney={players[aiIndex].netWorth}
+            prevPlayerMoney={players[aiIndex].previousNetWorth}
+          />
+        )}
         {players
           .filter(
-            (player) => player.id !== localPlayer.id && player.id !== 'ai'
+            (player) => player.id !== localPlayer.id && player.id !== 'ai',
           )
           .map((player) => (
             <Player
@@ -851,7 +766,11 @@ function Player({ playerName, playerMoney, prevPlayerMoney }) {
         ) : (
           <ArrowDownLine color="red" style={{ fontSize: '22px' }} />
         )}
-        ${playerMoney?.toFixed(2)}
+        $
+        {playerMoney?.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        })}
       </span>
     </div>
   );

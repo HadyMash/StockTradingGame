@@ -1,21 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import { ArrowLeftLine } from '@rsuite/icons';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { setSocketQuery, socket } from '../socket';
 import DividerWithText from '../shared/DividerWithText';
+import { GameState } from '../../../game.mjs';
+import { socketQueryType } from '../../../socketQueryType.mjs';
 
 function Home() {
+  const location = useLocation();
   const params = useParams();
   const [showCreateGame, setShowCreateGame] = useState(false);
   const [name, setName] = useState('');
   const [gameId, setGameId] = useState(
     params.code?.toUpperCase() ??
       new URL(window.location).searchParams.get('code') ??
-      ''
+      '',
   );
   {
     const url = new URL(window.location);
@@ -45,127 +49,179 @@ function Home() {
     });
   }
 
+  useEffect(() => {
+    if (location.state?.infoMessage) {
+      toast.info('You have been kicked from the lobby', {
+        position: 'top-right',
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: 'light',
+      });
+    }
+    return () => {
+      console.log('socket cleanup function unsubscribing from all events');
+      socket?.off();
+    };
+  }, []);
+
+  function socketOnJoinGame(res) {
+    const game = res.game;
+    const localPlayer = res.player;
+    const players = res.game.players;
+
+    console.log('gameJoined', game, localPlayer, players);
+    const url = new URL(window.location);
+    switch (game.state) {
+      case GameState.waiting:
+        url.searchParams.set('code', game.id);
+        window.history.replaceState({}, '', url);
+        navigate(`/lobby/${game.id}`, {
+          state: {
+            game: game,
+            localPlayer: localPlayer,
+            players: players,
+          },
+        });
+        break;
+      case GameState.started:
+        url.searchParams.set('code', game.id);
+        window.history.replaceState({}, '', url);
+        navigate(`/game/${game.id}`, {
+          state: {
+            game: game,
+            localPlayer: localPlayer,
+            players: players,
+          },
+        });
+        break;
+      default:
+        navigate('/home');
+        break;
+    }
+  }
+
   async function handleJoinGame() {
     setLoadingJoinGame(true);
-    let valid = true;
-    // check name
-    if (!name) {
-      valid = false;
-      showErrorToast('Please enter a name');
-    }
-
-    if (!gameId) {
-      valid = false;
-      showErrorToast('Please enter a game code');
-    }
-
-    if (!valid) {
-      return;
-    }
-
-    // send request
-    const response = await fetch('http://localhost:3000/join-game', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name,
-        gameId: gameId.toLowerCase(),
-      }),
-    }).catch((err) => {
-      console.error(err);
-      showErrorToast(err);
-    });
-
-    // handle response
     try {
-      if (response) {
-        const data = await response.json();
-        console.log(data);
-        if (response.status === 200) {
-          const url = new URL(window.location);
-          url.searchParams.set('code', data.game.id);
-          window.history.replaceState({}, '', url);
-          navigate(`/lobby/${data.game.id}`, { state: data });
-        } else {
-          console.log('error:', response.status, data);
-          showErrorToast(data.error ?? data.message ?? 'unknown error');
-        }
+      let valid = true;
+      // check name
+      if (!name) {
+        valid = false;
+        showErrorToast('Please enter a name');
       }
-    } finally {
-      setLoadingCreateGame(false);
-    }
 
-    setLoadingJoinGame(false);
+      if (!gameId) {
+        valid = false;
+        showErrorToast('Please enter a game code');
+      }
+
+      if (!valid) {
+        return;
+      }
+      if (socket?.connected) {
+        socket.disconnect();
+      }
+
+      // connect to game
+      setSocketQuery({
+        type: socketQueryType.JOIN_GAME,
+        username: name,
+        gameId: gameId.toLowerCase(),
+      });
+
+      socket?.on('error-message', (message) => {
+        showErrorToast(message);
+        setLoadingJoinGame(false);
+      });
+
+      socket?.on('join-game', socketOnJoinGame);
+
+      socket?.on('connect_error', () => {
+        showErrorToast('Could not connect to game');
+        setLoadingJoinGame(false);
+      });
+
+      socket?.on('disconnect', () => {
+        showErrorToast('Could not connect to game');
+        setLoadingJoinGame(false);
+      });
+
+      socket.connect();
+    } catch (err) {
+      console.error(err);
+      showErrorToast('Could not connect to game');
+      setLoadingJoinGame(false);
+    }
   }
 
   async function handleCreateGame() {
     if (showCreateGame) {
       setLoadingCreateGame(true);
-      let valid = true;
-      if (!name) {
-        valid = false;
-        showErrorToast('Please enter a name');
-      }
-      if (!maxRounds) {
-        valid = false;
-        showErrorToast('Please enter a max number of rounds');
-      }
-      if (!roundDuration) {
-        valid = false;
-        showErrorToast('Please enter a round duration');
-      }
-      if (!startingMoney) {
-        valid = false;
-        showErrorToast('Please enter a starting money amount');
-      }
-      if (!targetMoney) {
-        valid = false;
-        showErrorToast('Please enter a target money multiplier');
-      }
-      if (!maxPlayers) {
-        valid = false;
-        showErrorToast('Please enter a max number of players');
-      }
-
-      if (!valid) return;
-
-      const response = await fetch('http://localhost:3000/create-new-game', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          hostName: name,
-          maxGameTurns: maxRounds,
-          roundDurationSeconds: roundDuration,
-          startingMoney,
-          targetMoney: startingMoney * targetMoney,
-          maxPlayers,
-        }),
-      }).catch((err) => {
-        console.error(err);
-        showErrorToast(err);
-      });
-
       try {
-        if (response) {
-          const data = await response.json();
-          console.log(data);
-          if (response.status === 201) {
-            const url = new URL(window.location);
-            url.searchParams.set('code', data.game.id);
-            window.history.replaceState({}, '', url);
-            navigate(`/lobby/${data.game.id}`, { state: data });
-          } else {
-            console.log('error:', response.status, data);
-            showErrorToast(data.error ?? data.message ?? 'unknown error');
-          }
+        let valid = true;
+        if (!name) {
+          valid = false;
+          showErrorToast('Please enter a name');
         }
-      } finally {
-        setLoadingCreateGame(false);
+        if (!maxRounds) {
+          valid = false;
+          showErrorToast('Please enter a max number of rounds');
+        }
+        if (!roundDuration) {
+          valid = false;
+          showErrorToast('Please enter a round duration');
+        }
+        if (!startingMoney) {
+          valid = false;
+          showErrorToast('Please enter a starting money amount');
+        }
+        if (!targetMoney) {
+          valid = false;
+          showErrorToast('Please enter a target money multiplier');
+        }
+        if (!maxPlayers) {
+          valid = false;
+          showErrorToast('Please enter a max number of players');
+        }
+
+        if (!valid) return;
+
+        if (socket?.connected) {
+          socket.disconnect();
+        }
+
+        setSocketQuery({
+          type: socketQueryType.CREATE_GAME,
+          username: name,
+          maxGameTurns: parseInt(maxRounds),
+          roundDurationSeconds: parseInt(roundDuration),
+          startingMoney: parseInt(startingMoney),
+          targetMoney: parseInt(startingMoney) * parseFloat(targetMoney),
+          maxPlayers: parseInt(maxPlayers),
+        });
+
+        socket?.on('join-game', socketOnJoinGame);
+        socket?.on('connect_error', () => {
+          showErrorToast('Could not connect to game');
+          setLoadingJoinGame(false);
+        });
+        socket?.on('disconnect', () => {
+          showErrorToast('Could not connect to game');
+          setLoadingJoinGame(false);
+        });
+
+        socket.connect();
+      } catch (err) {
+        console.error(err);
+        showErrorToast('Could not connect to game');
+        setLoadingJoinGame(false);
       }
+
+      setLoadingCreateGame(false);
     } else {
       setShowCreateGame(true);
     }
@@ -292,7 +348,7 @@ function CreateGame({
       <GameSettingSlider
         title={'Duration'}
         min={10}
-        max={20}
+        max={90}
         value={roundDuration}
         setValue={setRoundDuration}
       />

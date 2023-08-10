@@ -1,20 +1,23 @@
 import PropTypes from 'prop-types';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import { Close } from '@rsuite/icons';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { socket } from '../socket';
 import { GameState } from '../../../game.mjs';
 
 function Lobby() {
   const location = useLocation();
+  console.log('location state', location.state);
   const navigate = useNavigate();
   const [game, setGame] = useState(location.state.game);
-  const localPlayer = location.state.player;
-  const [players, setPlayers] = useState(location.state.game.players);
+  const localPlayer = location.state.localPlayer;
+  const [players, setPlayers] = useState(location.state.players);
   const [kickPlayer, setKickPlayer] = useState(null);
   const [loadingStartGame, setLoadingStartGame] = useState(false);
+  const [infoMessage, setInfoMessage] = useState();
 
   function showErrorToast(message) {
     toast.error(message, {
@@ -30,305 +33,124 @@ function Lobby() {
   }
 
   useEffect(() => {
-    // set interval to poll for players
-    let abortController;
-    const updateIntervalId = setInterval(async () => {
-      abortController = new AbortController();
-      const response = await fetch(
-        `http://localhost:3000/update/${game.id}/${localPlayer.id}`,
-        {
-          signal: abortController.signal,
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      ).catch((err) => {
-        console.error(err);
-        showErrorToast(err);
+    socket.on('error-message', (message) => {
+      showErrorToast(message);
+    });
+
+    // TODO: fix kick message not displaying on home page
+    socket.on('kicked', () => {
+      console.log('kicked');
+      setInfoMessage('You were kicked from the game');
+    });
+
+    socket.on('player-joined', (data) => {
+      console.log('player-joined', data);
+      setPlayers((previousPlayers) => {
+        return [...previousPlayers, data.player];
       });
+    });
 
-      // handle response
-      try {
-        if (response) {
-          const data = await response.json();
-          console.log(data);
-          if (response.status === 200) {
-            const gameState = data.gameState;
-            if (!gameState) {
-              throw new Error('gameState not found');
-            }
-            console.log('updating players and game');
-            setPlayers(data.players);
-            setGame((previousGame) => {
-              return {
-                ...previousGame,
-                hostId: data.hostId,
-              };
-            });
+    socket.on('remove-player', (playerId) => {
+      console.log('remove-player', playerId);
+      setPlayers((previousPlayers) => {
+        return previousPlayers.filter((player) => player.id !== playerId);
+      });
+    });
 
-            if (gameState == GameState.active) {
-              navigate(`/game/${game.id}`, {
-                state: {
-                  game: {
-                    ...game,
-                    hostId: data.hostId,
-                    startTimestamp: data.startTimestamp,
-                  },
-                  players: data.players,
-                  localPlayer,
-                  stockData: data.stockData,
-                },
-              });
-            } else if (gameState == GameState.scoreboard) {
-              navigate('/scoreboard', {
-                state: {
-                  gameState: data.gameState,
-                  winner: data.winner,
-                  losers: data.losers,
-                },
-              });
-            }
-          } else {
-            console.log('error:', response.status, data);
-          }
-        }
-      } catch (err) {
-        console.error(err);
-        showErrorToast(err);
-      }
-    }, 2000);
+    socket.on('game-started', (data) => {
+      console.log('start-game', data);
+      navigate(`/game/${game.id}`, {
+        state: {
+          game,
+          players: data.players,
+          localPlayer,
+          stockData: data.stockData,
+          nextRoundTimestamp: data.nextRoundTimestamp,
+          round: data.round,
+        },
+      });
+    });
+
+    socket.on('new-host', (hostId) => {
+      console.log('new-host', hostId);
+      setGame((previousGame) => {
+        return {
+          ...previousGame,
+          hostId,
+        };
+      });
+    });
+
+    // TODO: don't route to home immediately after implementing connection recovery
+    socket.on('disconnect', () => {
+      console.log('disconnect');
+      navigate('/home', {
+        state: {
+          infoMessage: infoMessage,
+        },
+      });
+    });
 
     return () => {
-      clearInterval(updateIntervalId);
-      abortController?.abort();
+      socket?.off();
     };
   }, []);
-
-  useEffect(() => {
-    console.log(!players.find((player) => player.id === localPlayer.id));
-    if (!players.find((player) => player.id === localPlayer.id)) {
-      // player has been kicked
-      console.log('kicked');
-      const url = new URL(window.location);
-      url.searchParams.delete('code');
-      window.history.replaceState({}, '', url);
-      navigate('/home');
-    }
-  }, [players]);
 
   function handleKick(player) {
     setKickPlayer(player);
   }
 
   async function kick(id) {
-    const response = await fetch('http://localhost:3000/remove-player', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        gameId: game.id,
-        requestId: localPlayer.id,
-        playerId: id,
-      }),
-    }).catch((err) => {
-      console.error(err);
-      showErrorToast(err);
-    });
-
-    try {
-      if (!response) {
-        throw new Error('no response');
-      }
-      const data = await response.json();
-      console.log(data);
-
-      if (response.status === 200) {
-        const gameState = data.gameState;
-        if (!gameState) {
-          throw new Error('gameState not found');
-        }
-        setPlayers(data.players);
-        setGame((previousGame) => {
-          return {
-            ...previousGame,
-            hostId: data.hostId,
-          };
-        });
-        if (gameState == GameState.active) {
-          navigate(`/game/${game.id}`, {
-            state: {
-              game: {
-                ...game,
-                hostId: data.hostId,
-              },
-              players: data.players,
-              localPlayer,
-              stockData: data.stockData,
-            },
-          });
-        } else if (gameState == GameState.finished) {
-          navigate('/scoreboard', {
-            state: {
-              gameState: data.gameState,
-              winner: data.winner,
-              losers: data.losers,
-            },
-          });
-        }
-      } else {
-        console.log('error:', response.status, data);
-      }
-    } catch (error) {
-      console.error(error);
-      showErrorToast(error.message);
-    }
-
+    socket.emit('kick', id);
     setKickPlayer(null);
   }
 
   async function handleLeave() {
-    const response = await fetch('http://localhost:3000/remove-player', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        playerId: localPlayer.id,
-        requestId: localPlayer.id,
-        gameId: game.id,
-      }),
-    }).catch((err) => {
-      console.error(err);
-      showErrorToast(err);
-    });
-
-    // handle response
-    try {
-      if (response) {
-        if (response.status === 204 || response.status === 200) {
-          routeToHomePage();
-        } else {
-          const data = await response.json();
-          console.log(data);
-          console.log('error:', response.status, data);
-          showErrorToast(data.error ?? data.message ?? 'unknown error');
-        }
-      }
-    } catch (err) {
-      console.log('error:', err);
-    }
-  }
-
-  function routeToHomePage() {
-    const url = new URL(window.location);
-    url.searchParams.delete('code');
-    window.history.replaceState({}, '', url);
-    navigate(`/home`);
+    socket.disconnect();
   }
 
   async function handleStartGame() {
     setLoadingStartGame(true);
-    const response = await fetch('http://localhost:3000/start-game', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        gameId: game.id,
-        playerId: localPlayer.id,
-      }),
-    }).catch((err) => {
-      console.error(err);
-      showErrorToast(err);
-    });
-
-    try {
-      if (!response) {
-        throw new Error('no response');
-      }
-      const data = await response.json();
-      console.log(data);
-
-      if (response.status === 200) {
-        const gameState = data.gameState;
-        if (!gameState) {
-          throw new Error('gameState not found');
-        }
-        setPlayers(data.players);
-        setGame((previousGame) => {
-          return {
-            ...previousGame,
-            hostId: data.hostId,
-            startTimestamp: data.startTimestamp,
-          };
-        });
-        if (gameState == GameState.active) {
-          navigate(`/game/${game.id}`, {
-            state: {
-              game: {
-                ...game,
-                hostId: data.hostId,
-                startTimestamp: data.startTimestamp,
-              },
-              players: data.players,
-              localPlayer,
-              stockData: data.stockData,
-            },
-          });
-        } else {
-          navigate('/scoreboard', {
-            state: {
-              gameState: data.gameState,
-              winner: data.winner,
-              losers: data.losers,
-            },
-          });
-        }
-      } else {
-        console.log('error:', response.status, data);
-      }
-    } catch (error) {
-      console.error(error);
-      showErrorToast(error);
-    } finally {
-      setLoadingStartGame(false);
-    }
+    socket.emit('start-game');
+    // TODO: wait for response from server before turning loading off
+    setLoadingStartGame(false);
   }
+
+  useEffect(() => {
+    console.log('players', players);
+  }, []);
 
   return (
     <div
       style={{ position: 'relative', height: '100vh', boxSizing: 'border-box' }}
     >
       <div className="game-code-container">
-              <h2 style={{ marginRight: '10px' }}>{game.id.toUpperCase()}</h2>
+        <h2 style={{ marginRight: '10px' }}>{game.id.toUpperCase()}</h2>
 
-              <div
-                onClick={() => navigator.clipboard.writeText(game.id)}
-                style={{ cursor: 'pointer', paddingRight: '20px' }}
-                title="Click to copy code"
-              >
-                <svg
-                  className="copy-icon"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 467 512.22"
-                  width="12px"
-                >
-                  <path d="M131.07 372.11c.37 1 .57 2.08.57 3.2 0 1.13-.2 2.21-.57 3.21v75.91c0 10.74 4.41 20.53 11.5 27.62s16.87 11.49 27.62 11.49h239.02c10.75 0 20.53-4.4 27.62-11.49s11.49-16.88 11.49-27.62V152.42c0-10.55-4.21-20.15-11.02-27.18l-.47-.43c-7.09-7.09-16.87-11.5-27.62-11.5H170.19c-10.75 0-20.53 4.41-27.62 11.5s-11.5 16.87-11.5 27.61v219.69zm-18.67 12.54H57.23c-15.82 0-30.1-6.58-40.45-17.11C6.41 356.97 0 342.4 0 326.52V57.79c0-15.86 6.5-30.3 16.97-40.78l.04-.04C27.51 6.49 41.94 0 57.79 0h243.63c15.87 0 30.3 6.51 40.77 16.98l.03.03c10.48 10.48 16.99 24.93 16.99 40.78v36.85h50c15.9 0 30.36 6.5 40.82 16.96l.54.58c10.15 10.44 16.43 24.66 16.43 40.24v302.01c0 15.9-6.5 30.36-16.96 40.82-10.47 10.47-24.93 16.97-40.83 16.97H170.19c-15.9 0-30.35-6.5-40.82-16.97-10.47-10.46-16.97-24.92-16.97-40.82v-69.78zM340.54 94.64V57.79c0-10.74-4.41-20.53-11.5-27.63-7.09-7.08-16.86-11.48-27.62-11.48H57.79c-10.78 0-20.56 4.38-27.62 11.45l-.04.04c-7.06 7.06-11.45 16.84-11.45 27.62v268.73c0 10.86 4.34 20.79 11.38 27.97 6.95 7.07 16.54 11.49 27.17 11.49h55.17V152.42c0-15.9 6.5-30.35 16.97-40.82 10.47-10.47 24.92-16.96 40.82-16.96h170.35z" />
-                </svg>
-              </div>
-              <h2>
-                 {players.length} / {game.settings?.maxPlayers ?? '~'}
-              </h2>
-            </div>
+        <div
+          onClick={() => navigator.clipboard.writeText(game.id)}
+          style={{ cursor: 'pointer', paddingRight: '20px' }}
+          title="Click to copy code"
+        >
+          <svg
+            className="copy-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 467 512.22"
+            width="12px"
+          >
+            <path d="M131.07 372.11c.37 1 .57 2.08.57 3.2 0 1.13-.2 2.21-.57 3.21v75.91c0 10.74 4.41 20.53 11.5 27.62s16.87 11.49 27.62 11.49h239.02c10.75 0 20.53-4.4 27.62-11.49s11.49-16.88 11.49-27.62V152.42c0-10.55-4.21-20.15-11.02-27.18l-.47-.43c-7.09-7.09-16.87-11.5-27.62-11.5H170.19c-10.75 0-20.53 4.41-27.62 11.5s-11.5 16.87-11.5 27.61v219.69zm-18.67 12.54H57.23c-15.82 0-30.1-6.58-40.45-17.11C6.41 356.97 0 342.4 0 326.52V57.79c0-15.86 6.5-30.3 16.97-40.78l.04-.04C27.51 6.49 41.94 0 57.79 0h243.63c15.87 0 30.3 6.51 40.77 16.98l.03.03c10.48 10.48 16.99 24.93 16.99 40.78v36.85h50c15.9 0 30.36 6.5 40.82 16.96l.54.58c10.15 10.44 16.43 24.66 16.43 40.24v302.01c0 15.9-6.5 30.36-16.96 40.82-10.47 10.47-24.93 16.97-40.83 16.97H170.19c-15.9 0-30.35-6.5-40.82-16.97-10.47-10.46-16.97-24.92-16.97-40.82v-69.78zM340.54 94.64V57.79c0-10.74-4.41-20.53-11.5-27.63-7.09-7.08-16.86-11.48-27.62-11.48H57.79c-10.78 0-20.56 4.38-27.62 11.45l-.04.04c-7.06 7.06-11.45 16.84-11.45 27.62v268.73c0 10.86 4.34 20.79 11.38 27.97 6.95 7.07 16.54 11.49 27.17 11.49h55.17V152.42c0-15.9 6.5-30.35 16.97-40.82 10.47-10.47 24.92-16.96 40.82-16.96h170.35z" />
+          </svg>
+        </div>
+        <h2>
+          {players.length} / {game.settings?.maxPlayers ?? '~'}
+        </h2>
+      </div>
       <div className="lobby">
         <div>
           <div className="lobby-name-container">
             <div className="lobby-name-header">
               <h1>Lobby</h1>
             </div>
-            
           </div>
         </div>
         <div
@@ -342,17 +164,21 @@ function Lobby() {
           }
         >
           {players &&
-            players.map((player) => (
-              <Player
-                name={player.name}
-                handleKick={() => handleKick(player)}
-                key={player.id}
-                isHost={game.hostId === player.id}
-                showKick={
-                  game.hostId === localPlayer.id && player.id !== localPlayer.id
-                }
-              />
-            ))}
+            players.map((player) => {
+              console.log('players foreach', player);
+              return (
+                <Player
+                  name={player.name}
+                  handleKick={() => handleKick(player)}
+                  key={player.id}
+                  isHost={game.hostId === player.id}
+                  showKick={
+                    game.hostId === localPlayer.id &&
+                    player.id !== localPlayer.id
+                  }
+                />
+              );
+            })}
         </div>
         {game.hostId === localPlayer.id && (
           <button

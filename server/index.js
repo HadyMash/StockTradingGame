@@ -1,906 +1,775 @@
-import * as db from './db.js';
 import express from 'express';
-import cors from 'cors';
-//import * as game from '../game.mjs';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { socketQueryType } from '../socketQueryType.mjs';
 import { Game, GameSettings, GameState } from '../game.mjs';
+import { Player } from '../player.mjs';
+import {
+  getMarketDataEntries,
+  getRandomSymbolId,
+  stockEntryCount,
+} from './db.js';
 import { makeDecision, AIDecision } from './ai.js';
 
 const app = express();
+const httpServer = createServer(app);
 
-app.use(express.json());
-app.use(
-  cors({
-    // TODO: update for production build
+const io = new Server(httpServer, {
+  cors: {
+    // TODO: replace with app origin
     origin: '*',
-  })
-);
-
-app.post('/create-new-game', async (req, res) => {
-  try {
-    const hostName = req.body.hostName;
-    const maxGameTurns = req.body.maxGameTurns;
-    const roundDurationSeconds = req.body.roundDurationSeconds;
-    const startingMoney = req.body.startingMoney;
-    const targetMoney = req.body.targetMoney;
-    const maxPlayers = req.body.maxPlayers;
-
-    if (!hostName) {
-      console.log('Missing host name');
-      res.status(400).json({
-        error: 'Missing host name',
-      });
-      return;
-    }
-
-    if (!maxGameTurns) {
-      console.log('Missing max game turns');
-      res.status(400).json({
-        error: 'Missing max game turns',
-      });
-      return;
-    }
-
-    if (!roundDurationSeconds) {
-      console.log('Missing round duration seconds');
-      res.status(400).json({
-        error: 'Missing round duration seconds',
-      });
-      return;
-    }
-
-    if (!startingMoney) {
-      console.log('Missing starting money');
-      res.status(400).json({
-        error: 'Missing starting money',
-      });
-      return;
-    }
-
-    if (startingMoney <= 0) {
-      console.log('Starting money must be greater than 0');
-      res.status(400).json({
-        error: 'Starting money must be greater than 0',
-      });
-      return;
-    }
-
-    if (!targetMoney) {
-      console.log('Missing target money');
-      res.status(400).json({
-        error: 'Missing target money',
-      });
-      return;
-    }
-
-    if (targetMoney <= startingMoney) {
-      console.log('Target money must be greater than starting money');
-      res.status(400).json({
-        error: 'Target money must be greater than starting money',
-      });
-      return;
-    }
-
-    if (!maxPlayers) {
-      console.log('Missing max players');
-      res.status(400).json({
-        error: 'Missing max players',
-      });
-      return;
-    }
-
-    if (maxPlayers <= 1) {
-      console.log('Max players must be greater than 1');
-      res.status(400).json({
-        error: 'Max players must be greater than 1',
-      });
-      return;
-    }
-
-    const gameSettings = new GameSettings(
-      maxGameTurns,
-      roundDurationSeconds,
-      startingMoney,
-      targetMoney,
-      maxPlayers
-    );
-
-    // console.log(gameSettings.toObject());
-
-    const stockStartIds = {};
-    const symbols = Object.keys(db.stockEntryCount);
-    for (let i = 0; i < symbols.length; i++) {
-      const symbol = symbols[i];
-      const symbolId = db.getRandomSymbolId(
-        symbol,
-        gameSettings.maxGameTurns,
-        20
-      );
-      stockStartIds[symbol] = symbolId;
-    }
-
-    // console.log(stockStartIds);
-
-    if (stockStartIds.length === 0) {
-      res.status(500).json({
-        error: 'Failed to generate stock start ids',
-      });
-    }
-
-    // ai
-    try {
-      var aiNetWorthOverTime = [];
-
-      const assetsOverTime = [{}];
-      const moneyOverTime = [gameSettings.startingMoney];
-      const marketData = {};
-
-      for (let i = 0; i < symbols.length; i++) {
-        const symbol = symbols[i];
-        marketData[symbol] = [];
-        // console.log('starting', symbol);
-
-        const rawEntries = await db.getMarketDataEntries(
-          symbol,
-          stockStartIds[symbol],
-          gameSettings.maxGameTurns + 20
-        );
-        rawEntries.forEach((element) => {
-          marketData[symbol].push(element.resourceBody);
-        });
-
-        // TODO: adjust to allow ai to run from j = 0
-        for (let j = 1; j < maxGameTurns; j++) {
-          if (!assetsOverTime[j]) {
-            assetsOverTime[j] = {};
-          }
-          if (!moneyOverTime[j]) {
-            moneyOverTime[j] = moneyOverTime[j - 1];
-          }
-          let aiPrediction = makeDecision(marketData[symbol].slice(0, j + 1));
-          // console.log(`${j}:`, aiPrediction);
-          if (aiPrediction.decision === AIDecision.BUY) {
-            // * Buy
-            // console.log('buying');
-            if (!assetsOverTime[j - 1][symbol]) {
-              // console.log('set current to 0 at index:', j);
-              assetsOverTime[j][symbol] = 0;
-            } else {
-              assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
-            }
-            if (
-              aiPrediction.quantity * marketData[symbol][j].price >
-              moneyOverTime[j]
-            ) {
-              aiPrediction.quantity =
-                Math.floor((100 * money) / marketData[symbol][j].price) / 100;
-            }
-            assetsOverTime[j][symbol] += aiPrediction.quantity;
-            moneyOverTime[j] -=
-              marketData[symbol][j].price * aiPrediction.quantity;
-          } else if (aiPrediction.decision === AIDecision.SELL) {
-            // * Sell
-            // console.log('selling');
-            if (assetsOverTime[j - 1][symbol]) {
-              assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
-              if (assetsOverTime[j][symbol] < aiPrediction.quantity) {
-                aiPrediction.quantity = assetsOverTime[j][symbol] ?? 0;
-              }
-              assetsOverTime[j][symbol] -= aiPrediction.quantity;
-              moneyOverTime[j] +=
-                marketData[symbol][j].price * aiPrediction.quantity;
-            }
-          } else {
-            // * Hold
-            // console.log('holding');
-            // console.log(assetsOverTime[j - 1]);
-            if (assetsOverTime[j - 1][symbol]) {
-              assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol] ?? 0;
-            }
-          }
-        }
-        // console.log(moneyOverTime);
-        // console.log(assetsOverTime);
-      }
-
-      // console.log('calculating net worth');
-      // console.log(assetsOverTime);
-      // console.log(moneyOverTime);
-
-      for (let i = 0; i < maxGameTurns; i++) {
-        aiNetWorthOverTime[i] = 0;
-        let netWorth = moneyOverTime[i];
-        for (let j = 0; j < Object.keys(assetsOverTime[i]).length; j++) {
-          const symbol = Object.keys(assetsOverTime[i])[j];
-          netWorth += assetsOverTime[i][symbol] * marketData[symbol][i].price;
-        }
-        aiNetWorthOverTime[i] = netWorth;
-      }
-      // console.log('done with ai', aiNetWorthOverTime);
-    } catch (error) {
-      console.error('error with ai:', error);
-    }
-
-    const response = await db.createNewGame(
-      hostName,
-      gameSettings,
-      stockStartIds,
-      aiNetWorthOverTime
-    );
-
-    if (response.statusCode !== 201) {
-      res.status(response.statusCode).json({
-        error: response.error,
-      });
-      return;
-    }
-
-    const game = response.resource;
-
-    res.status(201).json({
-      game: {
-        id: game.id,
-        settings: game.settings,
-        state: game.state,
-        hostId: game.hostId,
-        players: Object.keys(game.players).map((playerId) => {
-          return {
-            id: playerId,
-            name: game.players[playerId].name,
-            netWorth: game.players[playerId].money,
-          };
-        }),
-      },
-      player: response.player,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create the game',
-      error: err.message,
-    });
-  }
+    methods: ['GET', 'POST'],
+  },
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+    skipMiddlewares: true,
+  },
 });
 
-app.post('/join-game', async (req, res) => {
-  try {
-    const gameId = req.body.gameId;
-    const playerName = req.body.name;
+const activeGames = {};
 
-    if (!gameId) {
-      res.status(400).json({
-        error: 'Missing game id',
-      });
-      return;
-    }
+function disconnectRoomSockets(room) {
+  const socketsInRoom = io.of('/').adapter.rooms.get(room);
 
-    if (!playerName) {
-      res.status(400).json({
-        error: 'Missing player name',
-      });
-      return;
-    }
-
-    const response = await db.addPlayerToGame(gameId, playerName);
-
-    if (response.statusCode !== 200) {
-      res.status(response.statusCode).json({
-        error: response.error,
-      });
-      return;
-    }
-
-    res.status(200).json({
-      game: {
-        id: response.resource.id,
-        settings: response.resource.settings,
-        state: response.resource.state,
-        hostId: response.resource.hostId,
-        players: Object.keys(response.resource.players).map((playerId) => {
-          return {
-            id: playerId,
-            name: response.resource.players[playerId].name,
-            netWorth: response.resource.players[playerId].money,
-          };
-        }),
-      },
-      player: response.player,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add player',
-      error: err.message,
+  if (socketsInRoom) {
+    socketsInRoom.forEach((socketId) => {
+      io.sockets.sockets.get(socketId).disconnect(true); // Disconnect with 'true' parameter to close the connection forcefully
     });
   }
-});
+}
 
-app.post('/remove-player', async (req, res) => {
-  try {
-    const gameId = req.body.gameId;
-    const playerId = req.body.playerId;
-    const requestId = req.body.requestId;
-
-    if (!gameId) {
-      res.status(400).json({
-        error: 'Missing game id',
-      });
-      return;
-    }
-
-    if (!playerId) {
-      res.status(400).json({
-        error: 'Missing player id',
-      });
-      return;
-    }
-
-    if (!requestId) {
-      res.status(400).json({
-        error: 'Missing request id',
-      });
-      return;
-    }
-
-    const response = await db.removePlayerFromGame(gameId, playerId, requestId);
-
-    if (response.statusCode !== 200) {
-      res.status(response.statusCode).json({
-        error: response.error,
-      });
-      return;
-    }
-
-    // console.log(response);
-
-    if (response.statusCode === 204) {
-      console.log('game deleted, 204');
-      res.status(204).json({});
-      return;
-    }
-
-    const players = response.resource.players;
-
-    res.status(200).json({
-      hostId: response.resource.hostId,
-      gameState: response.resource.state,
-      startTimestamp: response.resource.startTimestamp,
-      players: Object.keys(players).map((playerId) => {
+function joinGame(socket, game, player) {
+  io.to(socket.id).emit('join-game', {
+    game: {
+      id: game.id,
+      settings: game.settings,
+      state: game.state,
+      hostId: game.hostId,
+      players: Object.keys(game.players).map((playerId) => {
         return {
           id: playerId,
-          name: players[playerId].name,
-          netWorth: players[playerId].money,
+          name: game.players[playerId].name,
+          netWorth: game.players[playerId].money,
         };
       }),
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to remove player',
-      error: err.message,
-    });
+    },
+    player: player.toObject(),
+  });
+}
+
+function onDisconnect(socket, game) {
+  console.log('user disconnected', socket.id);
+  if (activeGames[game.id]) {
+    delete activeGames[game.id].players[socket.id];
+    if (Object.keys(activeGames[game.id].players).length === 0) {
+      console.log('no players left in game, deleting game');
+      delete activeGames[game.id];
+    } else {
+      io.to(game.id).emit('remove-player', socket.id);
+      if (socket.id === activeGames[game.id].hostId) {
+        const newHostId = Object.keys(activeGames[game.id].players)[0];
+        activeGames[game.id].hostId = newHostId;
+        io.to(game.id).emit('new-host', newHostId);
+      }
+    }
   }
-});
+}
 
-app.post('/start-game', async (req, res) => {
-  try {
-    const gameId = req.body.gameId;
-    const playerId = req.body.playerId;
+function kick(socket, playerId, game) {
+  console.log('kick', socket, playerId, game, activeGames[game.id]);
+  console.log(socket.id, activeGames[game.id].hostId);
+  if (socket.id == activeGames[game.id].hostId) {
+    console.log('kicking', playerId);
+    io.sockets.sockets.get(playerId)?.emit('kicked');
+    io.sockets.sockets.get(playerId)?.disconnect();
+  } else {
+    socket.emit('error-message', 'Only the host can kick players');
+    console.warn(
+      `non host tried to kick player. gameId: ${game.id}, ${socket.id} tried to kick ${playerId}`,
+    );
+  }
+}
 
-    if (!gameId) {
-      res.status(400).json({
-        error: 'Missing game id',
-      });
-      return;
-    }
-
-    if (!playerId) {
-      res.status(400).json({
-        error: 'Missing player id',
-      });
-      return;
-    }
-
-    const response = await db.startGame(gameId, playerId);
-
-    const dayNumber = 0;
-    const stockData = new Array(20);
-    const game = response.resource;
-
-    // for each symbol
-    for (let i = 0; i < Object.keys(game.stockStartIds).length; i++) {
-      const symbol = Object.keys(game.stockStartIds)[i];
-      // console.log('starting', symbol);
-      // get prices from start id to current day + a buffer of 20 days
-      const rawEntries = await db.getMarketDataEntries(
-        symbol,
-        game.stockStartIds[symbol],
-        // TODO: replace all + 20 with a constant
-        dayNumber + 20
-      );
-      // console.log('raw entries', rawEntries);
-      // for each day
-      for (let j = 0; j < rawEntries.length; j++) {
-        const entry = rawEntries[j];
-        if (entry.statusCode !== 200) {
-          throw new Error(entry.resourceBody);
-        }
-
-        const body = entry.resourceBody;
-        if (!stockData[j]) {
-          stockData[j] = {};
-        }
-        // add anonymised data to stock data
-        stockData[j][symbol] = {
-          id: j,
-          symbol: symbol,
-          price: body.price,
-          volume: body.volume,
+function startGame(socket, game) {
+  if (socket.id === activeGames[game.id].hostId) {
+    console.log('starting game');
+    activeGames[game.id].state = GameState.active;
+    activeGames[game.id].nextRoundTimestamp =
+      Date.now() + activeGames[game.id].settings.roundDurationSeconds * 1000;
+    activeGames[game.id].round = 0;
+    const playersToSend = Object.keys(activeGames[game.id].players).map(
+      (playerId) => {
+        return {
+          id: playerId,
+          name: activeGames[game.id].players[playerId].name,
+          netWorth: activeGames[game.id].players[playerId].money,
         };
-      }
-    }
-
-    res.status(200).json({
-      gameState: game.state,
-      players: [
-        ...Object.keys(game.players).map((playerId) => {
-          // calculate player's net worth
-          let netWorth = game.settings.startingMoney;
-          return {
-            id: playerId,
-            name: game.players[playerId].name,
-            netWorth: netWorth,
-          };
-        }),
-        {
-          id: 'ai',
-          name: 'AI',
-          netWorth: game.settings.startingMoney,
-        },
-      ],
-      startTimestamp: game.startTimestamp,
-      hostId: game.hostId,
-      player: game.players[playerId],
-      stockData: stockData,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to start game',
-      error: err.message,
-    });
-  }
-});
-
-app.post('/buy', async (req, res) => {
-  try {
-    const symbol = req.body.symbol;
-    const quantity = req.body.quantity;
-    const gameId = req.body.gameId;
-    const playerId = req.body.playerId;
-
-    if (!symbol) {
-      res.status(400).json({
-        error: 'Missing symbol',
-      });
-      return;
-    }
-    if (!quantity) {
-      res.status(400).json({
-        error: 'Missing quantity',
-      });
-      return;
-    }
-    if (quantity < 0) {
-      res.status(400).json({
-        error: 'Quantity must be positive',
-      });
-      return;
-    }
-    if (!gameId) {
-      res.status(400).json({
-        error: 'Missing game id',
-      });
-      return;
-    }
-    if (!playerId) {
-      res.status(400).json({
-        error: 'Missing player id',
-      });
-      return;
-    }
-
-    const response = await db.buyStock(gameId, playerId, symbol, quantity);
-    if (response.statusCode !== 200) {
-      const error = response.resource ?? response;
-      res.status(response.statusCode).json({
-        error: error,
-      });
-      return;
-    }
-
-    const dayNumber = Math.floor(
-      (Date.now() - response.resource.startTimestamp) /
-        1000 /
-        response.resource.settings.roundDurationSeconds
+      },
     );
 
-    const stockData = {};
-    for (
-      let i = 0;
-      i < Object.keys(response.resource.stockStartIds).length;
-      i++
+    if (
+      activeGames[game.id].aiNetWorthOverTime &&
+      activeGames[game.id].aiNetWorthOverTime[0]
     ) {
-      const symbol = Object.keys(response.resource.stockStartIds)[i];
-      const marketResponse = await db.getMarketDataEntry(
-        symbol,
-        response.resource.stockStartIds[symbol] + dayNumber + 20
-      );
-      if (marketResponse.statusCode !== 200) {
-        throw new Error(marketResponse.resourceBody);
-      }
-      stockData[symbol] = marketResponse.resource;
-      console.log(`${symbol}:`, stockData[symbol]);
+      playersToSend.push({
+        id: 'ai',
+        name: 'AI',
+        netWorth: activeGames[game.id].aiNetWorthOverTime[0],
+      });
     }
-
-    res.status(200).json({
-      gameState: response.resource.state,
-      player: response.resource.players[playerId],
+    io.to(game.id).emit('game-started', {
+      players: playersToSend,
+      nextRoundTimestamp: activeGames[game.id].nextRoundTimestamp,
+      stockData: game.stockData.slice(0, 20),
+      round: activeGames[game.id].round,
     });
-  } catch (err) {
-    console.error(err);
-    if (res.status !== 200) {
-      res.status(500).json({
-        message: 'Stock not bought',
-        error: err.message,
-      });
-    }
-  }
-});
 
-app.post('/sell', async (req, res) => {
-  try {
-    const symbol = req.body.symbol;
-    const quantity = req.body.quantity;
-    const gameId = req.body.gameId;
-    const playerId = req.body.playerId;
+    function gameUpdate() {
+      try {
+        activeGames[game.id].round++;
+        console.log('round', activeGames[game.id].round);
+        const newStockData =
+          activeGames[game.id].stockData[activeGames[game.id].round + 20] ??
+          activeGames[game.id].stockData[activeGames[game.id].round + 20 - 1];
+        console.log('new stock data', newStockData);
+        let endGame = false;
+        if (
+          activeGames[game.id].round >=
+          activeGames[game.id].settings.maxGameTurns
+        ) {
+          console.log('game over by max rounds');
+          endGame = true;
+          activeGames[game.id].round--;
+        }
+        let winner;
+        console.log('getting new players');
+        const newPlayers = Object.keys(activeGames[game.id].players).map(
+          (playerId) => {
+            const player = activeGames[game.id].players[playerId];
+            console.log('calculating net worth', player.name, player.stocks);
+            let netWorth = player.money;
+            console.log('net worth', netWorth);
+            for (let i = 0; i < Object.keys(player.stocks).length; i++) {
+              const symbol = Object.keys(player.stocks)[i];
+              console.log('symbol', symbol);
+              const quantity = player.stocks[symbol];
+              console.log('new stock data', newStockData);
+              console.log(newStockData[symbol]);
+              netWorth += quantity * newStockData[symbol].price;
+              console.log('net worth', netWorth);
+            }
+            console.log('net worth', netWorth);
 
-    if (!symbol) {
-      res.status(400).json({
-        error: 'Missing symbol',
-      });
-      return;
-    }
-    if (!quantity) {
-      res.status(400).json({
-        error: 'Missing quantity',
-      });
-      return;
-    }
-    if (quantity < 0) {
-      res.status(400).json({
-        error: 'Quantity must be positive',
-      });
-      return;
-    }
-    if (!gameId) {
-      res.status(400).json({
-        error: 'Missing game id',
-      });
-      return;
-    }
-    if (!playerId) {
-      res.status(400).json({
-        error: 'Missing player id',
-      });
-      return;
+            if (!winner) {
+              winner = {
+                id: playerId,
+                name: player.name,
+                netWorth: netWorth,
+                stocks: player.stocks,
+              };
+            }
+
+            if (netWorth > winner.netWorth) {
+              winner = {
+                id: playerId,
+                name: player.name,
+                netWorth: netWorth,
+                stocks: player.stocks,
+              };
+            }
+
+            if (netWorth >= activeGames[game.id].settings.targetMoney) {
+              console.log(
+                'game over by target money',
+                'player',
+                player.name,
+                'net worth',
+                netWorth,
+                'target money',
+                activeGames[game.id].settings.targetMoney,
+              );
+              endGame = true;
+            }
+
+            console.log('players map function', {
+              id: playerId,
+              name: player.name,
+              netWorth: netWorth,
+            });
+
+            return {
+              id: playerId,
+              name: player.name,
+              netWorth: netWorth,
+            };
+          },
+        );
+        if (
+          activeGames[game.id].aiNetWorthOverTime[activeGames[game.id].round]
+        ) {
+          newPlayers.push({
+            id: 'ai',
+            name: 'AI',
+            netWorth:
+              activeGames[game.id].aiNetWorthOverTime[
+                activeGames[game.id].round
+              ],
+          });
+        }
+        console.log('new players', newPlayers);
+
+        if (!endGame) {
+          console.log('game not over');
+          activeGames[game.id].nextRoundTimestamp =
+            Date.now() +
+            activeGames[game.id].settings.roundDurationSeconds * 1000;
+          io.to(game.id).emit('game-update', {
+            round: activeGames[game.id].round,
+            nextRoundTimestamp: activeGames[game.id].nextRoundTimestamp,
+            players: newPlayers,
+            newStockData: newStockData,
+          });
+
+          console.log('starting timeout till next round');
+          setTimeout(() => {
+            gameUpdate();
+          }, activeGames[game.id].nextRoundTimestamp - Date.now());
+        } else {
+          console.log('game over');
+
+          const tempGame = activeGames[game.id];
+
+          console.log('winner', winner);
+          console.log(
+            'losers',
+            Object.keys(tempGame.players)
+              .filter((playerId) => playerId !== winner.id)
+              .map((playerId) => {
+                const player = tempGame.players[playerId];
+                return {
+                  id: playerId,
+                  name: player.name,
+                  netWorth: player.money,
+                  stocks: player.stocks,
+                };
+              }),
+          );
+          activeGames[game.id].state = GameState.finished;
+          const aiNetWorthOverTimeCache =
+            activeGames[game.id].aiNetWorthOverTime;
+          if (
+            aiNetWorthOverTimeCache &&
+            aiNetWorthOverTimeCache.length > 0 &&
+            aiNetWorthOverTimeCache[aiNetWorthOverTimeCache.length - 1] >
+              winner.netWorth
+          ) {
+            winner = {
+              id: 'ai',
+              name: 'AI',
+              netWorth:
+                aiNetWorthOverTimeCache[aiNetWorthOverTimeCache.length - 1],
+              stocks: {},
+            };
+          }
+          io.to(game.id).emit('game-over', {
+            winner: winner,
+            losers: Object.keys(tempGame.players)
+              .filter((playerId) => playerId !== winner.id)
+              .map((playerId) => {
+                const player = tempGame.players[playerId];
+                return {
+                  id: playerId,
+                  name: player.name,
+                  netWorth: player.money,
+                  stocks: player.stocks,
+                };
+              }),
+          });
+          //   disconnect all sockets
+          setTimeout(() => {
+            disconnectRoomSockets(game.id);
+          }, 1000);
+        }
+      } catch (error) {
+        console.log(error);
+        socket.emit('error-message', error.message);
+      }
     }
 
-    const response = await db.sellStock(gameId, playerId, symbol, quantity);
-    if (response.statusCode !== 200) {
-      const error = response.resource ?? response;
-      res.status(response.statusCode).json({
-        error: error,
-      });
-      return;
-    }
+    // set delay for the next round
+    const now = Date.now();
+    const delay = activeGames[game.id].nextRoundTimestamp - now;
 
-    const dayNumber = Math.floor(
-      (Date.now() - response.resource.startTimestamp) /
-        1000 /
-        response.resource.settings.roundDurationSeconds
+    setTimeout(() => {
+      gameUpdate();
+    }, delay);
+  } else {
+    console.warn(
+      `non host tried to start game. gameId: ${game.id} socket id: ${socket.id}`,
     );
+    socket.emit('error-message', 'Only the host can start the game');
+  }
+}
 
-    const stockData = {};
-    for (
-      let i = 0;
-      i < Object.keys(response.resource.stockStartIds).length;
-      i++
-    ) {
-      const symbol = Object.keys(response.resource.stockStartIds)[i];
-      const marketResponse = await db.getMarketDataEntry(
-        symbol,
-        response.resource.stockStartIds[symbol] + dayNumber + 20
-      );
-      if (marketResponse.statusCode !== 200) {
-        throw new Error(marketResponse.resourceBody);
-      }
-      stockData[symbol] = marketResponse.resource;
-      console.log(`${symbol}:`, stockData[symbol]);
-    }
+function buy(socket, game, data) {
+  const symbol = data.symbol;
+  let quantity = data.quantity;
+  if (!symbol) {
+    console.warn('no symbol provided');
+    socket.emit('error-message', 'no symbol provided');
+    return;
+  }
+  if (!activeGames[game.id].stockStartIds[symbol]) {
+    console.warn('invalid symbol provided');
+    socket.emit('error-message', 'invalid symbol provided');
+    return;
+  }
+  if (!quantity) {
+    console.warn('no quantity provided');
+    socket.emit('error-message', 'no quantity provided');
+    return;
+  }
+  quantity = parseInt(quantity);
+  if (quantity < 0) {
+    console.warn('negative quantity provided');
+    socket.emit('error-message', 'negative quantity provided');
+    return;
+  }
 
-    res.status(200).json({
-      gameState: response.resource.state,
-      player: response.resource.players[playerId],
-    });
-  } catch (err) {
-    console.error(err);
-    if (res.status !== 200) {
-      res.status(500).json({
-        message: 'Stock not bought',
-        error: err.message,
-      });
+  const round = activeGames[game.id].round;
+  const price = activeGames[game.id].stockData[round][symbol].price;
+
+  if (!price) {
+    console.warn('invalid price');
+    socket.emit('error-message', 'invalid price');
+    return;
+  }
+
+  if (price * quantity > activeGames[game.id].players[socket.id].money) {
+    console.warn(
+      'insufficient funds',
+      'price',
+      price,
+      'quantity',
+      quantity,
+      'money',
+      activeGames[game.id].players[socket.id].money,
+    );
+    socket.emit('error-message', 'insufficient funds');
+    return;
+  }
+
+  console.log(
+    symbol,
+    price,
+    quantity,
+    activeGames[game.id].players[socket.id].money,
+  );
+  console.log(activeGames[game.id].stockData[round]);
+
+  // update money and stocks
+  activeGames[game.id].players[socket.id].money -= price * quantity;
+  if (!activeGames[game.id].players[socket.id].stocks[symbol]) {
+    activeGames[game.id].players[socket.id].stocks[symbol] = 0;
+  }
+  activeGames[game.id].players[socket.id].stocks[symbol] += quantity;
+
+  // send updated player data to client
+  io.to(socket.id).emit('update-player', {
+    money: activeGames[game.id].players[socket.id].money,
+    stocks: activeGames[game.id].players[socket.id].stocks,
+  });
+}
+
+function sell(socket, game, data) {
+  const symbol = data.symbol;
+  let quantity = data.quantity;
+  if (!symbol) {
+    console.warn('no symbol provided');
+    socket.emit('error-message', 'no symbol provided');
+    return;
+  }
+  if (!activeGames[game.id].stockStartIds[symbol]) {
+    console.warn('invalid symbol provided');
+    socket.emit('error-message', 'invalid symbol provided');
+    return;
+  }
+  if (!quantity) {
+    console.warn('no quantity provided');
+    socket.emit('error-message', 'no quantity provided');
+    return;
+  }
+  quantity = parseInt(quantity);
+  if (quantity < 0) {
+    console.warn('negative quantity provided');
+    socket.emit('error-message', 'negative quantity provided');
+    return;
+  }
+  if (
+    quantity > activeGames[game.id].players[socket.id].stocks[symbol] &&
+    activeGames[game.id].players[socket.id].stocks[symbol]
+  ) {
+    console.warn('insufficient stocks');
+    socket.emit('error-message', 'insufficient stocks');
+    return;
+  }
+
+  const round = activeGames[game.id].round;
+  const price = activeGames[game.id].stockData[round][symbol].price;
+
+  // update money and stocks
+  activeGames[game.id].players[socket.id].money += price * quantity;
+  activeGames[game.id].players[socket.id].stocks[symbol] -= quantity;
+
+  const newStocksKeys = Object.keys(
+    activeGames[game.id].players[socket.id].stocks,
+  );
+  const newStocks = activeGames[game.id].players[socket.id].stocks;
+
+  for (let i = 0; i < newStocksKeys.length; i++) {
+    if (newStocks[newStocksKeys[i]] === 0) {
+      delete newStocks[newStocksKeys[i]];
     }
   }
-});
 
-app.get('/update/:gameId/:playerId', async (req, res) => {
-  try {
-    const gameId = req.params.gameId;
-    const playerId = req.params.playerId;
-    if (!gameId) {
-      res.status(400).json({
-        error: 'Missing game id',
-      });
-      return;
-    }
+  io.to(socket.id).emit('update-player', {
+    money: activeGames[game.id].players[socket.id].money,
+    stocks: newStocks,
+  });
+}
 
-    if (!playerId) {
-      res.status(400).json({
-        error: 'Missing player id',
-      });
-      return;
-    }
+// TODO: check if the same socket is connected to another game
+io.on('connection', async (socket) => {
+  const query = socket.handshake.query;
+  let globalGameVar;
+  let globalPlayerVar;
+  if (query.type === socketQueryType.CREATE_GAME) {
+    try {
+      console.log('create game:', query);
+      if (!query.username) {
+        socket.emit('error-message', 'no username provided');
+        socket.disconnect();
+        return;
+      }
+      if (!query.maxGameTurns) {
+        socket.emit('error-message', 'no max game turns provided');
+        socket.disconnect();
+        return;
+      }
+      if (!query.roundDurationSeconds) {
+        socket.emit('error-message', 'no round duration seconds provided');
+        socket.disconnect();
+        return;
+      }
+      if (!query.startingMoney) {
+        socket.emit('error-message', 'no starting money provided');
+        socket.disconnect();
+        return;
+      }
+      if (query.startingMoney < 0) {
+        socket.emit('error-message', 'starting money cannot be negative');
+        socket.disconnect();
+        return;
+      }
+      if (!query.targetMoney) {
+        socket.emit('error-message', 'no target money provided');
+        socket.disconnect();
+        return;
+      }
+      if (query.targetMoney < query.startingMoney) {
+        socket.emit(
+          'error-message',
+          'target money cannot be less than starting money',
+        );
+        socket.disconnect();
+        return;
+      }
+      if (!query.maxPlayers) {
+        socket.emit('error-message', 'no max players provided');
+        socket.disconnect();
+        return;
+      }
 
-    const { statusCode, resource } = await db.getGame(gameId);
-    if (statusCode !== 200) {
-      console.log(statusCode, resource);
-      res.status(statusCode).json({
-        error: resource,
-      });
-      return;
-    }
+      // create game and add it to memory
+      {
+        let counter = 0;
+        do {
+          var gameId = Game.generateId();
+          counter++;
+        } while (activeGames[gameId] && counter < 100);
+        if (counter >= 100) {
+          console.log('failed to generate game id');
+          socket.emit('error-message', 'failed to generate game id');
+          socket.disconnect();
+        }
+      }
+      console.log(query.targetMoney);
 
-    const game = Game.fromObject(resource);
-
-    let response = {};
-
-    if (game.state === GameState.waiting) {
-      response = {
-        gameState: game.state,
-        players: Object.keys(game.players).map((playerId) => {
-          return {
-            id: playerId,
-            name: game.players[playerId].name,
-            netWorth: game.players[playerId].money,
-          };
-        }),
-        hostId: game.hostId,
-      };
-    } else if (game.state === GameState.active) {
-      const dayNumber = Math.floor(
-        (Date.now() - game.startTimestamp) /
-          1000 /
-          game.settings.roundDurationSeconds
+      const gameSettings = new GameSettings(
+        parseInt(query.maxGameTurns),
+        parseInt(query.roundDurationSeconds),
+        parseInt(query.startingMoney),
+        parseInt(query.targetMoney),
+        parseInt(query.maxPlayers),
       );
-      const stockData = new Array(dayNumber);
 
-      // console.log('day number', dayNumber);
+      const player = new Player(
+        socket.id,
+        query.username,
+        parseInt(gameSettings.startingMoney),
+      );
+
+      const stockStartIds = {};
+      const symbols = Object.keys(stockEntryCount);
+      for (let i = 0; i < symbols.length; i++) {
+        const symbol = symbols[i];
+        const symbolId = getRandomSymbolId(
+          symbol,
+          gameSettings.maxGameTurns,
+          20,
+        );
+        stockStartIds[symbol] = symbolId;
+      }
+
+      const game = new Game(
+        gameId,
+        gameSettings.toObject(),
+        { [player.id]: player.toObject() },
+        stockStartIds,
+        null,
+        player.id,
+        GameState.waiting,
+      );
+
+      // TODO: get market data after creating game to decrease delay between the request and joining
+      const marketData = new Array(gameSettings.maxGameTurns + 20);
 
       // for each symbol
-      for (let i = 0; i < Object.keys(game.stockStartIds).length; i++) {
-        const symbol = Object.keys(game.stockStartIds)[i];
-        // console.log('starting', symbol);
-        // get prices from start id to current day + a buffer of 20 days
-        const rawEntries = await db.getMarketDataEntries(
+      for (let i = 0; i < Object.keys(stockStartIds).length; i++) {
+        const symbol = Object.keys(stockStartIds)[i];
+
+        const rawEntries = await getMarketDataEntries(
           symbol,
           game.stockStartIds[symbol],
-          dayNumber + 20
+          game.settings.maxGameTurns + 20,
         );
-        // console.log('raw entries', rawEntries);
-        // for each day
+
+        // for each entry
         for (let j = 0; j < rawEntries.length; j++) {
           const entry = rawEntries[j];
           if (entry.statusCode !== 200) {
-            throw new Error(entry.resourceBody);
+            console.log('error getting market data entry', entry);
+            throw new Error('error getting market data entry');
           }
 
           const body = entry.resourceBody;
-          if (!stockData[j]) {
-            stockData[j] = {};
+          if (!marketData[j]) {
+            marketData[j] = {};
           }
-          // add anonymised data to stock data
-          stockData[j][symbol] = {
+
+          marketData[j][symbol] = {
             id: j,
-            symbol: symbol,
             price: body.price,
             volume: body.volume,
           };
         }
       }
 
-      // check for end conditions
-      let endGame = false;
-      const playersArray = [];
-      console.log('day number', dayNumber);
-      console.log('max game turns', game.settings.maxGameTurns);
-      console.log(
-        'dayNumber >= game.settings.maxGameTurns',
-        dayNumber >= game.settings.maxGameTurns
-      );
-      if (dayNumber >= game.settings.maxGameTurns) {
-        endGame = true;
-      } else {
-        for (let i = 0; i < Object.keys(game.players).length; i++) {
-          const player = game.players[Object.keys(game.players)[i]];
-          // calculate player's net worth
-          let netWorth = game.players[playerId].money;
-          for (
-            let i = 0;
-            i < Object.keys(game.players[playerId].stocks).length;
-            i++
-          ) {
-            const symbol = Object.keys(game.players[playerId].stocks)[i];
-            const quantity = game.players[playerId].stocks[symbol];
-            const price = stockData[20 + dayNumber - 1][symbol].price;
+      game.stockData = marketData;
 
-            netWorth += quantity * price;
+      // ai
+      try {
+        var aiNetWorthOverTime = [];
+
+        const assetsOverTime = [{}];
+        const moneyOverTime = [gameSettings.startingMoney];
+        const marketData = {};
+
+        const maxGameTurns = game.settings.maxGameTurns;
+
+        for (let i = 0; i < symbols.length; i++) {
+          const symbol = symbols[i];
+          marketData[symbol] = [];
+          // console.log('starting', symbol);
+
+          for (let i = 0; i < game.stockData.length; i++) {
+            marketData[symbol].push(game.stockData[i][symbol]);
           }
+          console.log('marketData', marketData);
 
-          if (netWorth >= game.settings.targetMoney) {
-            endGame = true;
-            break;
-          }
-          playersArray.push({
-            id: playerId,
-            name: game.players[playerId].name,
-            netWorth: netWorth,
-          });
-        }
-      }
-      // console.log('stock data', stockData);
-
-      if (endGame) {
-        const endGameResponse = await db.endGame(gameId);
-        if (endGameResponse.statusCode !== 200) {
-          throw new Error(endGameResponse.resourceBody);
-        }
-
-        let winner = game.players[Object.keys(game.players)[0]];
-        for (let i = 0; i < Object.keys(game.players).length; i++) {
-          const playerId = Object.keys(game.players)[i];
-          if (game.players[playerId].money > winner.money) {
-            winner = game.players[playerId];
-          }
-        }
-
-        if (
-          winner.money < resource.aiNetWorthOverTime[game.settings.maxGameTurns]
-        ) {
-          winner = {
-            id: 'ai',
-            name: 'AI',
-            netWorth: resource.aiNetWorthOverTime[game.settings.maxGameTurns],
-          };
-        }
-
-        response = {
-          gameState: GameState.finished,
-          winner: winner,
-          losers: Object.keys(game.players)
-            .filter((id) => id !== winner.id)
-            .map((playerId) => {
-              return game.players[playerId];
-            }),
-        };
-      } else {
-        response = {
-          gameState: game.state,
-          players: [
-            ...Object.keys(game.players).map((playerId) => {
-              // calculate player's net worth
-              let netWorth = game.players[playerId].money;
-              for (
-                let i = 0;
-                i < Object.keys(game.players[playerId].stocks).length;
-                i++
-              ) {
-                const symbol = Object.keys(game.players[playerId].stocks)[i];
-                const quantity = game.players[playerId].stocks[symbol];
-                const price = stockData[20 + dayNumber - 1][symbol].price;
-
-                netWorth += quantity * price;
+          // TODO: adjust to allow ai to run from j = 0
+          for (let j = 1; j < maxGameTurns; j++) {
+            if (!assetsOverTime[j]) {
+              assetsOverTime[j] = {};
+            }
+            if (!moneyOverTime[j]) {
+              moneyOverTime[j] = moneyOverTime[j - 1];
+            }
+            let aiPrediction = makeDecision(marketData[symbol].slice(0, j + 1));
+            // console.log(`${j}:`, aiPrediction);
+            if (aiPrediction.decision === AIDecision.BUY) {
+              // * Buy
+              // console.log('buying');
+              if (!assetsOverTime[j - 1][symbol]) {
+                // console.log('set current to 0 at index:', j);
+                assetsOverTime[j][symbol] = 0;
+              } else {
+                assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
               }
-
-              return {
-                id: playerId,
-                name: game.players[playerId].name,
-                netWorth: netWorth,
-              };
-            }),
-            {
-              id: 'ai',
-              name: 'AI',
-              netWorth: resource.aiNetWorthOverTime[dayNumber],
-            },
-          ],
-          player: game.players[playerId],
-          hostId: game.hostId,
-          startTimestamp: game.startTimestamp,
-          stockData: stockData,
-        };
-      }
-      // console.log('response', response);
-    } else if (game.state === GameState.finished) {
-      let winner = game.players[Object.keys(game.players)[0]];
-      for (let i = 0; i < Object.keys(game.players).length; i++) {
-        const playerId = Object.keys(game.players)[i];
-        if (game.players[playerId].money > winner.money) {
-          winner = game.players[playerId];
+              if (
+                aiPrediction.quantity * marketData[symbol][j].price >
+                moneyOverTime[j]
+              ) {
+                aiPrediction.quantity =
+                  Math.floor((100 * money) / marketData[symbol][j].price) / 100;
+              }
+              assetsOverTime[j][symbol] += aiPrediction.quantity;
+              moneyOverTime[j] -=
+                marketData[symbol][j].price * aiPrediction.quantity;
+            } else if (aiPrediction.decision === AIDecision.SELL) {
+              // * Sell
+              // console.log('selling');
+              if (assetsOverTime[j - 1][symbol]) {
+                assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
+                if (assetsOverTime[j][symbol] < aiPrediction.quantity) {
+                  aiPrediction.quantity = assetsOverTime[j][symbol] ?? 0;
+                }
+                assetsOverTime[j][symbol] -= aiPrediction.quantity;
+                moneyOverTime[j] +=
+                  marketData[symbol][j].price * aiPrediction.quantity;
+              }
+            } else {
+              // * Hold
+              // console.log('holding');
+              // console.log(assetsOverTime[j - 1]);
+              if (assetsOverTime[j - 1][symbol]) {
+                assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol] ?? 0;
+              }
+            }
+          }
+          // console.log(moneyOverTime);
+          // console.log(assetsOverTime);
         }
-      }
-      if (
-        winner.money < resource.aiNetWorthOverTime[game.settings.maxGameTurns]
-      ) {
-        winner = {
-          id: 'ai',
-          name: 'AI',
-          netWorth: resource.aiNetWorthOverTime[game.settings.maxGameTurns],
-        };
+
+        // console.log('calculating net worth');
+        // console.log(assetsOverTime);
+        // console.log(moneyOverTime);
+
+        for (let i = 0; i < maxGameTurns; i++) {
+          aiNetWorthOverTime[i] = 0;
+          let netWorth = moneyOverTime[i];
+          for (let j = 0; j < Object.keys(assetsOverTime[i]).length; j++) {
+            const symbol = Object.keys(assetsOverTime[i])[j];
+            netWorth += assetsOverTime[i][symbol] * marketData[symbol][i].price;
+          }
+          aiNetWorthOverTime[i] = netWorth;
+        }
+        // console.log('done with ai', aiNetWorthOverTime);
+      } catch (error) {
+        console.error('error with ai:', error);
       }
 
-      response = {
-        gameState: game.state,
-        winner: winner,
-        losers: Object.keys(game.players)
-          .filter((id) => id !== winner.id)
-          .map((playerId) => {
-            return game.players[playerId];
-          }),
-      };
+      console.log('aiNetWorthOverTime', aiNetWorthOverTime);
+      game.aiNetWorthOverTime = aiNetWorthOverTime;
+
+      // set game in memory
+      activeGames[game.id.toString()] = game;
+      globalGameVar = game;
+      globalPlayerVar = player;
+      // add socket to game room
+      socket.join(game.id.toString());
+      console.log('created game:', activeGames[game.id]);
+
+      joinGame(socket, game, player);
+    } catch (e) {
+      console.error(e);
+      socket.emit('error-message', `failed to create game: ${e.message}`);
+      socket.disconnect();
+      return;
+    }
+  } else if (query.type === socketQueryType.JOIN_GAME) {
+    console.log('join game:', query);
+    if (!query.username) {
+      socket.emit('error-message', 'no username provided');
+      socket.disconnect();
+      return;
+    }
+    if (!query.gameId) {
+      socket.emit('error-message', 'no game id provided');
+      socket.disconnect();
+      return;
     }
 
-    res.status(200).json(response);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      error: error.message,
+    console.log(activeGames);
+    console.log(io.rooms);
+
+    // look for game
+
+    const game = activeGames[query.gameId.toLowerCase()];
+    if (!game) {
+      console.log('game not found');
+      socket.emit('error-message', 'game not found');
+      socket.disconnect();
+      return;
+    }
+    console.log('game found:', game.toObject());
+
+    if (game.state !== GameState.waiting) {
+      console.log('game not waiting');
+      socket.emit(
+        'error-message',
+        game.state === GameState.active
+          ? 'game already started'
+          : 'game has ended',
+      );
+      socket.disconnect();
+      return;
+    }
+
+    if (Object.keys(game.players).length >= game.settings.maxPlayers) {
+      console.log('game full');
+      socket.emit('error-message', 'game full');
+      socket.disconnect();
+      return;
+    }
+
+    // add player to game and room
+    // add the player to the game
+    const player = new Player(
+      socket.id,
+      query.username,
+      parseInt(game.settings.startingMoney),
+    );
+    game.players[player.id] = player.toObject();
+    globalGameVar = game;
+    globalPlayerVar = player;
+    socket.join(game.id.toString());
+    console.log('player joined game:', game.toObject());
+
+    joinGame(socket, game, player);
+
+    // notify other players that a new player has joined
+    socket.broadcast.to(game.id).emit('player-joined', {
+      player: {
+        id: player.id,
+        name: player.name,
+        netWorth: player.money,
+      },
     });
+  } else {
+    socket.disconnect();
     return;
   }
+
+  socket.on('disconnect', () => onDisconnect(socket, globalGameVar));
+  socket.on('kick', (playerId) => kick(socket, playerId, globalGameVar));
+  socket.on('start-game', () => startGame(socket, globalGameVar));
+  socket.on('buy', (data) => buy(socket, globalGameVar, data));
+  socket.on('sell', (data) => sell(socket, globalGameVar, data));
+
+  console.log('user connected', socket.id);
 });
 
-// app.get('/getRandomStocks', async (req, res) => {
-//   try {
-//     const symbol = req.body.symbol;
-//     const maxGameDuration = req.body.maxGameDuration;
-//     const count = req.body.count;
-//     const gameId = req.body.gameId;
-//     //const game = db.getGame(gameId);
-//     const data = await db.getRandomMarketDataEntries(
-//       symbol,
-//       maxGameDuration,
-//       count
-//     );
-//     res.status(200).json(data);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).send('Internal Server Error');
-//   }
-// });
-
-const port = 3000;
-app.listen(port, () => console.log(`Listening on port ${port}...`));
+httpServer.listen(3000, () => {
+  console.log('listening on *:3000');
+});
