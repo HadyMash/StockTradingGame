@@ -35,7 +35,25 @@ function Game() {
   const [nextRoundTimestamp, setNextRoundTimestamp] = useState(
     location.state.nextRoundTimestamp,
   );
+  const [countdown, setCountdown] = useState(
+    location.state.game.settings.roundDurationSeconds,
+  );
   const [round, setRound] = useState(location.state.round + 1);
+
+  useEffect(() => {
+    const countdownIntervalId = setInterval(() => {
+      setCountdown((previousCountdown) => {
+        return Math.max(
+          0,
+          Math.round((nextRoundTimestamp - Date.now()) / 1000),
+        );
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(countdownIntervalId);
+    };
+  }, [nextRoundTimestamp]);
 
   function showErrorToast(message) {
     toast.error(message, {
@@ -98,6 +116,10 @@ function Game() {
       setStockData((previousStockData) => {
         return [...previousStockData, data.newStockData];
       });
+
+      // update next round nextRoundTimestamp
+      setNextRoundTimestamp(data.nextRoundTimestamp);
+      setCountdown(Math.round((data.nextRoundTimestamp - Date.now()) / 1000));
     });
 
     socket.on('game-over', (data) => {
@@ -149,6 +171,8 @@ function Game() {
                 volume: obj[selectedSymbol].volume,
               };
             })}
+            round={round}
+            countdown={countdown}
           />
         </div>
         <div className="panel account">
@@ -172,12 +196,14 @@ function Game() {
   );
 }
 
-function Chart({ selectedSymbol, symbols, setSymbol, data }) {
+function Chart({ selectedSymbol, symbols, setSymbol, data, round, countdown }) {
   Chart.propTypes = {
     selectedSymbol: PropTypes.string.isRequired,
     symbols: PropTypes.arrayOf(PropTypes.string).isRequired,
     setSymbol: PropTypes.func.isRequired,
     data: PropTypes.arrayOf(PropTypes.object).isRequired,
+    round: PropTypes.number.isRequired,
+    countdown: PropTypes.number.isRequired,
   };
 
   const [domain, setDomain] = useState({ x: [0, 20] });
@@ -336,6 +362,10 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
             </Dropdown.Item>
           ))}
         </Dropdown>
+      </div>
+      <div className="round-info">
+        <h2>Round {round}</h2>
+        <h3>{countdown}s</h3>
       </div>
     </React.Fragment>
   );

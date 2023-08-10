@@ -197,6 +197,7 @@ function startGame(socket, game) {
             Date.now() +
             activeGames[game.id].settings.roundDurationSeconds * 1000;
           io.to(game.id).emit('game-update', {
+            round: activeGames[game.id].round,
             nextRoundTimestamp: activeGames[game.id].nextRoundTimestamp,
             players: newPlayers,
             newStockData: newStockData,
