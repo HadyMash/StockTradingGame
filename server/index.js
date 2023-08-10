@@ -10,9 +10,20 @@ import {
   stockEntryCount,
 } from './db.js';
 import { makeDecision, AIDecision } from './ai.js';
+import path from 'path';
 
 const app = express();
+const __filename = new URL(import.meta.url).pathname;
+const __dirname = path.dirname(__filename);
 const httpServer = createServer(app);
+
+// Serve static assets from the 'dist' directory
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Handle all routes and serve the main index.html file
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
 const io = new Server(httpServer, {
   cors: {

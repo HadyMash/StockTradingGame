@@ -1,6 +1,8 @@
 import { io } from 'socket.io-client';
 
-const socketURL = 'http://localhost:3000';
+const url = new URL(window.location.href);
+
+const socketURL = url.origin;
 
 export var socket;
 

@@ -371,7 +371,7 @@ function CreateGame({
       <GameSettingSlider
         title={'players'}
         min={2}
-        max={10}
+        max={50}
         value={maxPlayers}
         setValue={setMaxPlayers}
       />
