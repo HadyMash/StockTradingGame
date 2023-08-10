@@ -291,17 +291,20 @@ io.on('connection', async (socket) => {
         activeGames[game.id].players[socket.id].money += price * quantity;
         activeGames[game.id].players[socket.id].stocks[symbol] -= quantity;
 
+        const newStocksKeys = Object.keys(
+          activeGames[game.id].players[socket.id].stocks,
+        );
+        const newStocks = activeGames[game.id].players[socket.id].stocks;
+
+        for (let i = 0; i < newStocksKeys.length; i++) {
+          if (newStocks[newStocksKeys[i]] === 0) {
+            delete newStocks[newStocksKeys[i]];
+          }
+        }
+
         io.to(socket.id).emit('update-player', {
           money: activeGames[game.id].players[socket.id].money,
-          stocks: Object.keys(activeGames[game.id].players[socket.id].stocks)
-            .filter(
-              (symbol) =>
-                activeGames[game.id].players[socket.id].stocks[symbol] > 0,
-            )
-            .map(
-              (symbol) =>
-                activeGames[game.id].players[socket.id].stocks[symbol],
-            ),
+          stocks: newStocks,
         });
       });
 
