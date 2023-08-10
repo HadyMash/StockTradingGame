@@ -206,12 +206,14 @@ io.on('connection', async (socket) => {
       });
 
       // TODO: refactor and also communicate error to user
-      socket.on('buy', ({ symbol, quantity }) => {
+      socket.on('buy', (data) => {
+        const symbol = data.symbol;
+        let quantity = data.quantity;
         if (!symbol) {
           console.warn('no symbol provided');
           return;
         }
-        if (!activeGames[game.id].settings.stockStartIds[symbol]) {
+        if (!activeGames[game.id].stockStartIds[symbol]) {
           console.warn('invalid symbol provided');
           return;
         }
@@ -219,6 +221,7 @@ io.on('connection', async (socket) => {
           console.warn('no quantity provided');
           return;
         }
+        quantity = parseInt(quantity);
         if (quantity < 0) {
           console.warn('negative quantity provided');
           return;
@@ -252,12 +255,14 @@ io.on('connection', async (socket) => {
       });
 
       // TODO: refactor and also communicate errors to users
-      socket.on('sell', ({ symbol, quantity }) => {
+      socket.on('sell', (data) => {
+        const symbol = data.symbol;
+        let quantity = data.quantity;
         if (!symbol) {
           console.warn('no symbol provided');
           return;
         }
-        if (!activeGames[game.id].settings.stockStartIds[symbol]) {
+        if (!activeGames[game.id].stockStartIds[symbol]) {
           console.warn('invalid symbol provided');
           return;
         }
@@ -265,6 +270,7 @@ io.on('connection', async (socket) => {
           console.warn('no quantity provided');
           return;
         }
+        quantity = parseInt(quantity);
         if (quantity < 0) {
           console.warn('negative quantity provided');
           return;
