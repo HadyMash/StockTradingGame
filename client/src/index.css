@@ -793,7 +793,7 @@ button.lobby-leave {
   height: 60px;
   border-radius: 50%;
   background-color: rgb(99, 99, 99);
-  margin-left: 50px;
+  margin-left: 45px;
 }
 
 .card {
@@ -850,6 +850,10 @@ button.lobby-leave {
   justify-content: center;
   align-items: center;
   color: #727272;
+  position: absolute;
+  top: 5px;
+  left: 20px;
+  padding: 5px 5px;
 }
 .copy-icon:hover {
   transform: scale(1.1);
