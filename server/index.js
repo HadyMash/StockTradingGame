@@ -80,8 +80,10 @@ function kick(socket, playerId, game) {
   console.log(socket.id, activeGames[game.id].hostId);
   if (socket.id == activeGames[game.id].hostId) {
     console.log('kicking', playerId);
+    io.sockets.sockets.get(playerId)?.emit('kicked');
     io.sockets.sockets.get(playerId)?.disconnect();
   } else {
+    socket.emit('error-message', 'Only the host can kick players');
     console.warn(
       `non host tried to kick player. gameId: ${game.id}, ${socket.id} tried to kick ${playerId}`,
     );
@@ -91,7 +93,6 @@ function kick(socket, playerId, game) {
 function startGame(socket, game) {
   if (socket.id === activeGames[game.id].hostId) {
     console.log('starting game');
-    // TODO: get market data
     activeGames[game.id].state = GameState.active;
     activeGames[game.id].nextRoundTimestamp =
       Date.now() + activeGames[game.id].settings.roundDurationSeconds * 1000;
@@ -249,6 +250,7 @@ function startGame(socket, game) {
         }
       } catch (error) {
         console.log(error);
+        socket.emit('error-message', error.message);
       }
     }
 
@@ -263,6 +265,7 @@ function startGame(socket, game) {
     console.warn(
       `non host tried to start game. gameId: ${game.id} socket id: ${socket.id}`,
     );
+    socket.emit('error-message', 'Only the host can start the game');
   }
 }
 
@@ -271,19 +274,23 @@ function buy(socket, game, data) {
   let quantity = data.quantity;
   if (!symbol) {
     console.warn('no symbol provided');
+    socket.emit('error-message', 'no symbol provided');
     return;
   }
   if (!activeGames[game.id].stockStartIds[symbol]) {
     console.warn('invalid symbol provided');
+    socket.emit('error-message', 'invalid symbol provided');
     return;
   }
   if (!quantity) {
     console.warn('no quantity provided');
+    socket.emit('error-message', 'no quantity provided');
     return;
   }
   quantity = parseInt(quantity);
   if (quantity < 0) {
     console.warn('negative quantity provided');
+    socket.emit('error-message', 'negative quantity provided');
     return;
   }
 
@@ -292,11 +299,13 @@ function buy(socket, game, data) {
 
   if (!price) {
     console.warn('invalid price');
+    socket.emit('error-message', 'invalid price');
     return;
   }
 
   if (price * quantity > activeGames[game.id].players[socket.id].money) {
     console.warn('insufficient funds');
+    socket.emit('error-message', 'insufficient funds');
     return;
   }
 
@@ -327,19 +336,23 @@ function sell(socket, game, data) {
   let quantity = data.quantity;
   if (!symbol) {
     console.warn('no symbol provided');
+    socket.emit('error-message', 'no symbol provided');
     return;
   }
   if (!activeGames[game.id].stockStartIds[symbol]) {
     console.warn('invalid symbol provided');
+    socket.emit('error-message', 'invalid symbol provided');
     return;
   }
   if (!quantity) {
     console.warn('no quantity provided');
+    socket.emit('error-message', 'no quantity provided');
     return;
   }
   quantity = parseInt(quantity);
   if (quantity < 0) {
     console.warn('negative quantity provided');
+    socket.emit('error-message', 'negative quantity provided');
     return;
   }
   if (
@@ -347,6 +360,7 @@ function sell(socket, game, data) {
     activeGames[game.id].players[socket.id].stocks[symbol]
   ) {
     console.warn('insufficient stocks');
+    socket.emit('error-message', 'insufficient stocks');
     return;
   }
 
@@ -382,36 +396,46 @@ io.on('connection', async (socket) => {
   if (query.type === socketQueryType.CREATE_GAME) {
     try {
       console.log('create game:', query);
-      // TODO: validate query
       if (!query.username) {
+        socket.emit('error-message', 'no username provided');
         socket.disconnect();
         return;
       }
       if (!query.maxGameTurns) {
+        socket.emit('error-message', 'no max game turns provided');
         socket.disconnect();
         return;
       }
       if (!query.roundDurationSeconds) {
+        socket.emit('error-message', 'no round duration seconds provided');
         socket.disconnect();
         return;
       }
       if (!query.startingMoney) {
+        socket.emit('error-message', 'no starting money provided');
         socket.disconnect();
         return;
       }
       if (query.startingMoney < 0) {
+        socket.emit('error-message', 'starting money cannot be negative');
         socket.disconnect();
         return;
       }
       if (!query.targetMoney) {
+        socket.emit('error-message', 'no target money provided');
         socket.disconnect();
         return;
       }
       if (query.targetMoney < query.startingMoney) {
+        socket.emit(
+          'error-message',
+          'target money cannot be less than starting money',
+        );
         socket.disconnect();
         return;
       }
       if (!query.maxPlayers) {
+        socket.emit('error-message', 'no max players provided');
         socket.disconnect();
         return;
       }
@@ -425,7 +449,8 @@ io.on('connection', async (socket) => {
         } while (activeGames[gameId] && counter < 100);
         if (counter >= 100) {
           console.log('failed to generate game id');
-          // TODO: handle error
+          socket.emit('error-message', 'failed to generate game id');
+          socket.disconnect();
         }
       }
       console.log(query.targetMoney);
@@ -512,17 +537,19 @@ io.on('connection', async (socket) => {
       joinGame(socket, game, player);
     } catch (e) {
       console.error(e);
+      socket.emit('error-message', `failed to create game: ${e.message}`);
       socket.disconnect();
       return;
     }
   } else if (query.type === socketQueryType.JOIN_GAME) {
     console.log('join game:', query);
-    // TODO: handle error
     if (!query.username) {
+      socket.emit('error-message', 'no username provided');
       socket.disconnect();
       return;
     }
     if (!query.gameId) {
+      socket.emit('error-message', 'no game id provided');
       socket.disconnect();
       return;
     }
@@ -535,22 +562,27 @@ io.on('connection', async (socket) => {
     const game = activeGames[query.gameId.toLowerCase()];
     if (!game) {
       console.log('game not found');
+      socket.emit('error-message', 'game not found');
       socket.disconnect();
       return;
-      // TODO: handle error
     }
     console.log('game found:', game.toObject());
 
-    // TODO: handle error
     if (game.state !== GameState.waiting) {
       console.log('game not waiting');
+      socket.emit(
+        'error-message',
+        game.state === GameState.active
+          ? 'game already started'
+          : 'game has ended',
+      );
       socket.disconnect();
       return;
     }
 
-    // TODO: handle error
     if (Object.keys(game.players).length >= game.settings.maxPlayers) {
       console.log('game full');
+      socket.emit('error-message', 'game full');
       socket.disconnect();
       return;
     }

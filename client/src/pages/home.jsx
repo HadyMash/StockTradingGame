@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Slider } from 'rsuite';
 import 'rsuite/dist/rsuite-no-reset.min.css';
 import { ArrowLeftLine } from '@rsuite/icons';
@@ -12,13 +12,14 @@ import { GameState } from '../../../game.mjs';
 import { socketQueryType } from '../../../socketQueryType.mjs';
 
 function Home() {
+  const location = useLocation();
   const params = useParams();
   const [showCreateGame, setShowCreateGame] = useState(false);
   const [name, setName] = useState('');
   const [gameId, setGameId] = useState(
     params.code?.toUpperCase() ??
       new URL(window.location).searchParams.get('code') ??
-      ''
+      '',
   );
   {
     const url = new URL(window.location);
@@ -49,6 +50,18 @@ function Home() {
   }
 
   useEffect(() => {
+    if (location.state?.infoMessage) {
+      toast.info('You have been kicked from the lobby', {
+        position: 'top-right',
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: 'light',
+      });
+    }
     return () => {
       console.log('socket cleanup function unsubscribing from all events');
       socket?.off();
@@ -120,11 +133,18 @@ function Home() {
         gameId: gameId.toLowerCase(),
       });
 
+      socket?.on('error-message', (message) => {
+        showErrorToast(message);
+        setLoadingJoinGame(false);
+      });
+
       socket?.on('join-game', socketOnJoinGame);
+
       socket?.on('connect_error', () => {
         showErrorToast('Could not connect to game');
         setLoadingJoinGame(false);
       });
+
       socket?.on('disconnect', () => {
         showErrorToast('Could not connect to game');
         setLoadingJoinGame(false);

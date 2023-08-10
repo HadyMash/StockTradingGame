@@ -97,6 +97,10 @@ function Game() {
   useEffect(() => {
     console.log(location.state);
 
+    socket.on('error-message', (data) => {
+      showErrorToast(data.message);
+    });
+
     socket.on('game-update', (data) => {
       console.log('game update', data);
 

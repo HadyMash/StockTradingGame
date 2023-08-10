@@ -15,6 +15,7 @@ function Lobby() {
   const [players, setPlayers] = useState(location.state.players);
   const [kickPlayer, setKickPlayer] = useState(null);
   const [loadingStartGame, setLoadingStartGame] = useState(false);
+  const [infoMessage, setInfoMessage] = useState();
 
   function showErrorToast(message) {
     toast.error(message, {
@@ -30,6 +31,16 @@ function Lobby() {
   }
 
   useEffect(() => {
+    socket.on('error-message', (message) => {
+      showErrorToast(message);
+    });
+
+    // TODO: fix kick message not displaying on home page
+    socket.on('kicked', () => {
+      console.log('kicked');
+      setInfoMessage('You were kicked from the game');
+    });
+
     socket.on('player-joined', (data) => {
       console.log('player-joined', data);
       setPlayers((previousPlayers) => {
@@ -71,7 +82,11 @@ function Lobby() {
     // TODO: don't route to home immediately after implementing connection recovery
     socket.on('disconnect', () => {
       console.log('disconnect');
-      navigate('/home');
+      navigate('/home', {
+        state: {
+          infoMessage: infoMessage,
+        },
+      });
     });
 
     return () => {
