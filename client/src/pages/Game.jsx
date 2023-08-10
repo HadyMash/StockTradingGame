@@ -26,14 +26,14 @@ function Game() {
         ...p,
         previousNetWorth: p.netWorth,
       };
-    })
+    }),
   );
   const [localPlayer, setLocalPlayer] = useState(location.state.localPlayer);
   const [stockData, setStockData] = useState(location.state.stockData);
   const symbols = Object.keys(location.state.stockData[0]);
   const [selectedSymbol, setSelectedSymbol] = useState(symbols[0]);
   const [nextRoundTimestamp, setNextRoundTimestamp] = useState(
-    location.state.nextRoundTimestamp
+    location.state.nextRoundTimestamp,
   );
   const [round, setRound] = useState(location.state.round + 1);
 
@@ -51,12 +51,12 @@ function Game() {
   }
 
   async function handleBuy(symbol, quantity) {
-    console.log('buy');
-    // socket.emit('buy', {
-    //     symbol: symbol,
-    //     quantity: quantity,
-    // });
     try {
+      console.log('buy');
+      socket.emit('buy', {
+        symbol: symbol,
+        quantity: quantity,
+      });
     } catch (error) {
       console.error(error);
       showErrorToast(error);
@@ -66,10 +66,10 @@ function Game() {
   async function handleSell(symbol, quantity) {
     try {
       console.log('sell');
-      // socket.emit('sell', {
-      //     symbol: symbol,
-      //     quantity: quantity,
-      // });
+      socket.emit('sell', {
+        symbol: symbol,
+        quantity: quantity,
+      });
     } catch (error) {
       console.error(error);
       showErrorToast(error);
@@ -118,9 +118,15 @@ function Game() {
       });
     });
 
-    socket.on('portfolio-update', (data) => {
+    socket.on('update-player', (data) => {
       console.log('portfolio update', data);
-      setLocalPlayer(data);
+      setLocalPlayer((previousPlayer) => {
+        return {
+          ...previousPlayer,
+          money: data.money,
+          stocks: data.stocks,
+        };
+      });
     });
 
     return () => {
@@ -204,7 +210,7 @@ function Chart({ selectedSymbol, symbols, setSymbol, data }) {
     {
       maxPrice: data[0]?.price || null,
       minPrice: data[0]?.price || null,
-    }
+    },
   );
 
   function panGraph(e) {
@@ -615,7 +621,7 @@ function Players({ localPlayer, players }) {
 
   const aiIndex = players.findIndex((player) => player.id === 'ai');
   const localPlayerIndex = players.findIndex(
-    (player) => player.id === localPlayer.id
+    (player) => player.id === localPlayer.id,
   );
 
   return (
@@ -648,7 +654,7 @@ function Players({ localPlayer, players }) {
         {/*/>*/}
         {players
           .filter(
-            (player) => player.id !== localPlayer.id && player.id !== 'ai'
+            (player) => player.id !== localPlayer.id && player.id !== 'ai',
           )
           .map((player) => (
             <Player

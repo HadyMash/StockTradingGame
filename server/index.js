@@ -85,13 +85,13 @@ io.on('connection', async (socket) => {
         parseInt(query.roundDurationSeconds),
         parseInt(query.startingMoney),
         parseInt(query.targetMoney),
-        parseInt(query.maxPlayers)
+        parseInt(query.maxPlayers),
       );
 
       const player = new Player(
         socket.id,
         query.username,
-        parseInt(gameSettings.startingMoney)
+        parseInt(gameSettings.startingMoney),
       );
 
       const stockStartIds = {};
@@ -101,7 +101,7 @@ io.on('connection', async (socket) => {
         const symbolId = getRandomSymbolId(
           symbol,
           gameSettings.maxGameTurns,
-          20
+          20,
         );
         stockStartIds[symbol] = symbolId;
       }
@@ -113,7 +113,7 @@ io.on('connection', async (socket) => {
         stockStartIds,
         null,
         player.id,
-        GameState.waiting
+        GameState.waiting,
       );
 
       // TODO: get market data after creating game to decrease delay between the request and joining
@@ -126,7 +126,7 @@ io.on('connection', async (socket) => {
         const rawEntries = await getMarketDataEntries(
           symbol,
           game.stockStartIds[symbol],
-          game.settings.maxGameTurns + 20
+          game.settings.maxGameTurns + 20,
         );
 
         // for each entry
@@ -200,14 +200,99 @@ io.on('connection', async (socket) => {
           io.sockets.sockets.get(playerId)?.disconnect();
         } else {
           console.warn(
-            `non host tried to kick player. gameId: ${game.id}, ${socket.id} tried to kick ${playerId}`
+            `non host tried to kick player. gameId: ${game.id}, ${socket.id} tried to kick ${playerId}`,
           );
         }
       });
 
+      // TODO: refactor and also communicate error to user
+      socket.on('buy', ({ symbol, quantity }) => {
+        if (!symbol) {
+          console.warn('no symbol provided');
+          return;
+        }
+        if (!activeGames[game.id].settings.stockStartIds[symbol]) {
+          console.warn('invalid symbol provided');
+          return;
+        }
+        if (!quantity) {
+          console.warn('no quantity provided');
+          return;
+        }
+        if (quantity < 0) {
+          console.warn('negative quantity provided');
+          return;
+        }
+
+        const round = activeGames[game.id].round;
+        const price = activeGames[game.id].stockData[round][symbol].price;
+
+        if (!price) {
+          console.warn('invalid price');
+          return;
+        }
+
+        if (price * quantity > activeGames[game.id].players[socket.id].money) {
+          console.warn('insufficient funds');
+          return;
+        }
+
+        // update money and stocks
+        activeGames[game.id].players[socket.id].money -= price * quantity;
+        if (!activeGames[game.id].players[socket.id].stocks[symbol]) {
+          activeGames[game.id].players[socket.id].stocks[symbol] = 0;
+        }
+        activeGames[game.id].players[socket.id].stocks[symbol] += quantity;
+
+        // send updated player data to client
+        io.to(socket.id).emit('update-player', {
+          money: activeGames[game.id].players[socket.id].money,
+          stocks: activeGames[game.id].players[socket.id].stocks,
+        });
+      });
+
+      // TODO: refactor and also communicate errors to users
+      socket.on('sell', ({ symbol, quantity }) => {
+        if (!symbol) {
+          console.warn('no symbol provided');
+          return;
+        }
+        if (!activeGames[game.id].settings.stockStartIds[symbol]) {
+          console.warn('invalid symbol provided');
+          return;
+        }
+        if (!quantity) {
+          console.warn('no quantity provided');
+          return;
+        }
+        if (quantity < 0) {
+          console.warn('negative quantity provided');
+          return;
+        }
+        if (
+          quantity > activeGames[game.id].players[socket.id].stocks[symbol] &&
+          activeGames[game.id].players[socket.id].stocks[symbol]
+        ) {
+          console.warn('insufficient stocks');
+          return;
+        }
+
+        const round = activeGames[game.id].round;
+        const price = activeGames[game.id].stockData[round][symbol].price;
+
+        // update money and stocks
+        activeGames[game.id].players[socket.id].money += price * quantity;
+        activeGames[game.id].players[socket.id].stocks[symbol] -= quantity;
+
+        io.to(socket.id).emit('update-player', {
+          money: activeGames[game.id].players[socket.id].money,
+          stocks: activeGames[game.id].players[socket.id].stocks,
+        });
+      });
+
       // TODO: refactor disconnect and kick and start game to avoid code duplication
       socket.on('start-game', () => {
-        if (socket.id == activeGames[game.id].hostId) {
+        if (socket.id === activeGames[game.id].hostId) {
           console.log('starting game');
           // TODO: get market data
           activeGames[game.id].state = GameState.active;
@@ -223,7 +308,7 @@ io.on('connection', async (socket) => {
                   name: activeGames[game.id].players[playerId].name,
                   netWorth: activeGames[game.id].players[playerId].money,
                 };
-              }
+              },
             ),
             nextRoundTimestamp: activeGames[game.id].nextRoundTimestamp,
             stockData: game.stockData.slice(0, 20),
@@ -282,7 +367,7 @@ io.on('connection', async (socket) => {
                     'net worth',
                     netWorth,
                     'target money',
-                    activeGames[game.id].settings.targetMoney
+                    activeGames[game.id].settings.targetMoney,
                   );
                   endGame = true;
                 }
@@ -298,7 +383,7 @@ io.on('connection', async (socket) => {
                   name: player.name,
                   netWorth: netWorth,
                 };
-              }
+              },
             );
             console.log('new players', newPlayers);
 
@@ -335,7 +420,7 @@ io.on('connection', async (socket) => {
                       netWorth: player.money,
                       stocks: player.stocks,
                     };
-                  })
+                  }),
               );
               activeGames[game.id].state = GameState.finished;
               io.to(game.id).emit('game-over', {
@@ -365,7 +450,7 @@ io.on('connection', async (socket) => {
           }, delay);
         } else {
           console.warn(
-            `non host tried to start game. gameId: ${game.id} socket id: ${socket.id}`
+            `non host tried to start game. gameId: ${game.id} socket id: ${socket.id}`,
           );
         }
       });
@@ -416,7 +501,7 @@ io.on('connection', async (socket) => {
     const player = new Player(
       socket.id,
       query.username,
-      parseInt(game.settings.startingMoney)
+      parseInt(game.settings.startingMoney),
     );
     game.players[player.id] = player.toObject();
     socket.join(game.id.toString());
@@ -475,7 +560,7 @@ io.on('connection', async (socket) => {
         io.sockets.sockets.get(playerId)?.disconnect();
       } else {
         console.warn(
-          `non host tried to kick player. gameId: ${game.id}, ${socket.id} tried to kick ${playerId}`
+          `non host tried to kick player. gameId: ${game.id}, ${socket.id} tried to kick ${playerId}`,
         );
       }
     });
@@ -496,7 +581,7 @@ io.on('connection', async (socket) => {
         });
       } else {
         console.warn(
-          `non host tried to start game. gameId: ${game.id} socket id: ${socket.id}`
+          `non host tried to start game. gameId: ${game.id} socket id: ${socket.id}`,
         );
       }
     });
