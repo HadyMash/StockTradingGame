@@ -9,7 +9,7 @@ import {
   getRandomSymbolId,
   stockEntryCount,
 } from './db.js';
-import { join } from 'path';
+import { makeDecision, AIDecision } from './ai.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -526,6 +526,102 @@ io.on('connection', async (socket) => {
       }
 
       game.stockData = marketData;
+
+      // ai
+      try {
+        var aiNetWorthOverTime = [];
+
+        const assetsOverTime = [{}];
+        const moneyOverTime = [gameSettings.startingMoney];
+        const marketData = {};
+
+        const maxGameTurns = game.settings.maxGameTurns;
+
+        for (let i = 0; i < symbols.length; i++) {
+          const symbol = symbols[i];
+          marketData[symbol] = [];
+          // console.log('starting', symbol);
+
+          for (let i = 0; i < game.stockData.length; i++) {
+            marketData[symbol].push(game.stockData[i][symbol]);
+          }
+          console.log('marketData', marketData);
+
+          // TODO: adjust to allow ai to run from j = 0
+          for (let j = 1; j < maxGameTurns; j++) {
+            if (!assetsOverTime[j]) {
+              assetsOverTime[j] = {};
+            }
+            if (!moneyOverTime[j]) {
+              moneyOverTime[j] = moneyOverTime[j - 1];
+            }
+            let aiPrediction = makeDecision(marketData[symbol].slice(0, j + 1));
+            // console.log(`${j}:`, aiPrediction);
+            if (aiPrediction.decision === AIDecision.BUY) {
+              // * Buy
+              // console.log('buying');
+              if (!assetsOverTime[j - 1][symbol]) {
+                // console.log('set current to 0 at index:', j);
+                assetsOverTime[j][symbol] = 0;
+              } else {
+                assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
+              }
+              if (
+                aiPrediction.quantity * marketData[symbol][j].price >
+                moneyOverTime[j]
+              ) {
+                aiPrediction.quantity =
+                  Math.floor((100 * money) / marketData[symbol][j].price) / 100;
+              }
+              assetsOverTime[j][symbol] += aiPrediction.quantity;
+              moneyOverTime[j] -=
+                marketData[symbol][j].price * aiPrediction.quantity;
+            } else if (aiPrediction.decision === AIDecision.SELL) {
+              // * Sell
+              // console.log('selling');
+              if (assetsOverTime[j - 1][symbol]) {
+                assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol];
+                if (assetsOverTime[j][symbol] < aiPrediction.quantity) {
+                  aiPrediction.quantity = assetsOverTime[j][symbol] ?? 0;
+                }
+                assetsOverTime[j][symbol] -= aiPrediction.quantity;
+                moneyOverTime[j] +=
+                  marketData[symbol][j].price * aiPrediction.quantity;
+              }
+            } else {
+              // * Hold
+              // console.log('holding');
+              // console.log(assetsOverTime[j - 1]);
+              if (assetsOverTime[j - 1][symbol]) {
+                assetsOverTime[j][symbol] = assetsOverTime[j - 1][symbol] ?? 0;
+              }
+            }
+          }
+          // console.log(moneyOverTime);
+          // console.log(assetsOverTime);
+        }
+
+        // console.log('calculating net worth');
+        // console.log(assetsOverTime);
+        // console.log(moneyOverTime);
+
+        for (let i = 0; i < maxGameTurns; i++) {
+          aiNetWorthOverTime[i] = 0;
+          let netWorth = moneyOverTime[i];
+          for (let j = 0; j < Object.keys(assetsOverTime[i]).length; j++) {
+            const symbol = Object.keys(assetsOverTime[i])[j];
+            netWorth += assetsOverTime[i][symbol] * marketData[symbol][i].price;
+          }
+          aiNetWorthOverTime[i] = netWorth;
+        }
+        // console.log('done with ai', aiNetWorthOverTime);
+      } catch (error) {
+        console.error('error with ai:', error);
+      }
+
+      console.log('aiNetWorthOverTime', aiNetWorthOverTime);
+      game.aiNetWorthOverTime = aiNetWorthOverTime;
+
       // set game in memory
       activeGames[game.id.toString()] = game;
       globalGameVar = game;
