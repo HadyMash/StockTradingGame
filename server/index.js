@@ -255,6 +255,22 @@ function startGame(socket, game) {
               }),
           );
           activeGames[game.id].state = GameState.finished;
+          const aiNetWorthOverTimeCache =
+            activeGames[game.id].aiNetWorthOverTime;
+          if (
+            aiNetWorthOverTimeCache &&
+            aiNetWorthOverTimeCache.length > 0 &&
+            aiNetWorthOverTimeCache[aiNetWorthOverTimeCache.length - 1] >
+              winner.netWorth
+          ) {
+            winner = {
+              id: 'ai',
+              name: 'AI',
+              netWorth:
+                aiNetWorthOverTimeCache[aiNetWorthOverTimeCache.length - 1],
+              stocks: {},
+            };
+          }
           io.to(game.id).emit('game-over', {
             winner: winner,
             losers: Object.keys(tempGame.players)
